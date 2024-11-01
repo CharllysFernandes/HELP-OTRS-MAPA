@@ -1,0 +1,35 @@
+{
+    "manifest_version": 3,
+    "name": "Help Otrs - MAPA",
+    "description": "Ferramenta de alerta para o Otrs. Versão MAPA.",
+    "version": "1.0.0",
+    "author": "João Felipe Lima",
+    "content_scripts": [
+        {
+            "matches": ["https://atendetiadmin.agro.gov.br/otrs/*"],
+            "js": [
+                "script.js"
+            ],
+            "run_at": "document_end"
+        }
+    ],
+    "permissions": [
+        "activeTab",
+        "scripting"
+    ],
+    "action": {
+        "default_title": "Help Otrs",
+        "default_icon": {
+            "16": "logo.png",
+            "32": "logo.png",
+            "48": "logo.png",
+            "128": "logo.png"
+        }
+    },
+    "icons": {
+        "16": "logo.png",
+        "32": "logo.png",
+        "48": "logo.png",
+        "128": "logo.png"
+    }
+}
