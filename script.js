@@ -1058,6 +1058,995 @@ async function isCorrectQueue() {
     return configManager.compareUserLevels(userLevel, normalizedCurrentLevel);
 }
 
+// ========================================
+// FUNCIONALIDADE: REAPROVEITAR DADOS DO FORMULÁRIO
+// ========================================
+
+// Classe para gerenciar reaproveitamento de dados do formulário
+class FormDataReuser {
+    constructor() {
+        this.popup = null;
+        this.isVisible = false;
+        this.formData = {};
+        this.targetEditor = null;
+        this.observerActive = false;
+    }
+
+    // Mapear campos do formulário OTRS para rótulos amigáveis
+    getFieldMappings() {
+        // Capturar dinamicamente todos os campos Field
+        const dynamicMappings = this.captureDynamicFields();
+        
+        // Mapeamentos estáticos (para compatibilidade com versões antigas)
+        const staticMappings = {
+            // Campos de cliente
+            'CustomerUser': { label: '👤 Usuário Cliente', category: 'cliente' },
+            'CustomerID': { label: '🏢 ID do Cliente', category: 'cliente' },
+            
+            // Campos de contato
+            'DynamicField_PRIRamal': { label: '📞 Ramal/Contato', category: 'contato' },
+            'DynamicField_PRITelefone': { label: '📱 Telefone', category: 'contato' },
+            'DynamicField_PRIEmail': { label: '📧 E-mail', category: 'contato' },
+            
+            // Campos de localização
+            'DynamicField_PRILocalidade': { label: '📍 Localidade', category: 'localizacao' },
+            'DynamicField_PRISala': { label: '🏠 Sala', category: 'localizacao' },
+            'DynamicField_PRIAndar': { label: '🏢 Andar', category: 'localizacao' },
+            'DynamicField_PRIPredio': { label: '🏛️ Prédio', category: 'localizacao' },
+            
+            // Campos de patrimônio
+            'DynamicField_PRIPatrimonio': { label: '💼 Patrimônio', category: 'patrimonio' },
+            'DynamicField_PRIEquipamento': { label: '💻 Equipamento', category: 'patrimonio' },
+            'DynamicField_PRISerial': { label: '🔢 Número Serial', category: 'patrimonio' },
+            
+            // Campos adicionais
+            'DynamicField_PRISetor': { label: '🏛️ Setor', category: 'organizacional' },
+            'DynamicField_PRIDepartamento': { label: '🏢 Departamento', category: 'organizacional' },
+            'DynamicField_PRIObservacoes': { label: '📝 Observações', category: 'adicional' }
+        };
+
+        // Mesclar mapeamentos dinâmicos com estáticos (dinâmicos têm prioridade)
+        return { ...staticMappings, ...dynamicMappings };
+    }
+
+    // Capturar campos dinamicamente da estrutura <div class="Field">
+    captureDynamicFields() {
+        const dynamicMappings = {};
+        
+        // Procurar todos os divs com class="Field"
+        const fieldDivs = document.querySelectorAll('div.Field');
+        
+        fieldDivs.forEach((fieldDiv) => {
+            // Procurar input, select, ou textarea dentro do Field
+            const input = fieldDiv.querySelector('input, select, textarea');
+            
+            if (input && input.id && input.title) {
+                const fieldId = input.id;
+                const fieldTitle = input.title.trim();
+                
+                // Determinar categoria baseada no nome do campo
+                const category = this.categorizeField(fieldId, fieldTitle);
+                
+                // Determinar ícone baseado no tipo de campo
+                const icon = this.getFieldIcon(fieldId, fieldTitle, input.type);
+                
+                dynamicMappings[fieldId] = {
+                    label: `${icon} ${fieldTitle}`,
+                    category: category
+                };
+                
+                console.log(`Help OTRS: Campo dinâmico capturado - ${fieldId}: ${fieldTitle} (${category})`);
+            }
+        });
+
+        console.log(`Help OTRS: ${Object.keys(dynamicMappings).length} campos dinâmicos capturados`);
+        return dynamicMappings;
+    }
+
+    // Categorizar campo baseado no ID e título
+    categorizeField(fieldId, fieldTitle) {
+        const id = fieldId.toLowerCase();
+        const title = fieldTitle.toLowerCase();
+        
+        // Regras de categorização
+        if (id.includes('customer') || title.includes('cliente') || title.includes('usuário')) {
+            return 'cliente';
+        }
+        
+        if (id.includes('ramal') || id.includes('telefone') || id.includes('email') || id.includes('contato') ||
+            title.includes('ramal') || title.includes('telefone') || title.includes('email') || title.includes('contato')) {
+            return 'contato';
+        }
+        
+        if (id.includes('sala') || id.includes('local') || id.includes('andar') || id.includes('predio') || id.includes('endereco') ||
+            title.includes('sala') || title.includes('local') || title.includes('andar') || title.includes('prédio') || title.includes('endereço')) {
+            return 'localizacao';
+        }
+        
+        if (id.includes('patrimonio') || id.includes('equipamento') || id.includes('serial') || id.includes('tag') ||
+            title.includes('patrimônio') || title.includes('equipamento') || title.includes('serial') || title.includes('tag')) {
+            return 'patrimonio';
+        }
+        
+        if (id.includes('setor') || id.includes('departamento') || id.includes('orgao') || id.includes('unidade') ||
+            title.includes('setor') || title.includes('departamento') || title.includes('órgão') || title.includes('unidade')) {
+            return 'organizacional';
+        }
+        
+        // Categoria padrão
+        return 'geral';
+    }
+
+    // Obter ícone baseado no tipo de campo
+    getFieldIcon(fieldId, fieldTitle, inputType) {
+        const id = fieldId.toLowerCase();
+        const title = fieldTitle.toLowerCase();
+        
+        // Ícones específicos por tipo de campo
+        if (id.includes('customer') || title.includes('cliente') || title.includes('usuário')) {
+            return '👤';
+        }
+        
+        if (id.includes('ramal') || title.includes('ramal')) {
+            return '📞';
+        }
+        
+        if (id.includes('telefone') || title.includes('telefone')) {
+            return '📱';
+        }
+        
+        if (id.includes('email') || title.includes('email') || inputType === 'email') {
+            return '📧';
+        }
+        
+        if (id.includes('sala') || title.includes('sala')) {
+            return '🏠';
+        }
+        
+        if (id.includes('local') || title.includes('local')) {
+            return '📍';
+        }
+        
+        if (id.includes('andar') || title.includes('andar')) {
+            return '🏢';
+        }
+        
+        if (id.includes('predio') || title.includes('prédio')) {
+            return '🏛️';
+        }
+        
+        if (id.includes('patrimonio') || title.includes('patrimônio')) {
+            return '💼';
+        }
+        
+        if (id.includes('equipamento') || title.includes('equipamento')) {
+            return '💻';
+        }
+        
+        if (id.includes('serial') || title.includes('serial')) {
+            return '🔢';
+        }
+        
+        if (id.includes('setor') || title.includes('setor')) {
+            return '🏛️';
+        }
+        
+        if (id.includes('departamento') || title.includes('departamento')) {
+            return '🏢';
+        }
+        
+        if (id.includes('observ') || title.includes('observ') || id.includes('descri') || title.includes('descri')) {
+            return '📝';
+        }
+        
+        if (inputType === 'date') {
+            return '📅';
+        }
+        
+        if (inputType === 'time') {
+            return '⏰';
+        }
+        
+        if (inputType === 'url') {
+            return '🔗';
+        }
+        
+        if (inputType === 'number') {
+            return '🔢';
+        }
+        
+        // Ícone padrão
+        return '📄';
+    }
+
+    // Aguardar o carregamento completo do CKEditor
+    async waitForEditorReady(editor, maxAttempts = 10) {
+        if (!editor || editor.tagName !== 'IFRAME') {
+            return editor;
+        }
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                const iframeDoc = editor.contentDocument || editor.contentWindow.document;
+                if (iframeDoc && iframeDoc.body && iframeDoc.readyState === 'complete') {
+                    // Verificar se o body está realmente editável
+                    if (iframeDoc.body.contentEditable !== 'false') {
+                        console.log('Help OTRS: CKEditor pronto após', attempt + 1, 'tentativas');
+                        return editor;
+                    }
+                }
+            } catch (e) {
+                console.log('Help OTRS: Tentativa', attempt + 1, 'falhou, aguardando...');
+            }
+            
+            // Aguardar 500ms antes da próxima tentativa
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        console.log('Help OTRS: Timeout aguardando CKEditor ficar pronto');
+        return editor; // Retornar mesmo que não esteja totalmente pronto
+    }
+
+    // Capturar dados preenchidos nos formulários
+    captureFormData() {
+        const mappings = this.getFieldMappings();
+        const capturedData = {};
+
+        Object.keys(mappings).forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            const mapping = mappings[fieldId];
+            
+            let value = null;
+
+            if (field) {
+                // Capturar valor baseado no tipo de campo
+                if (field.type === 'select-one' || field.tagName === 'SELECT') {
+                    const selectedOption = field.selectedOptions[0];
+                    if (selectedOption && selectedOption.value && selectedOption.value !== '') {
+                        value = selectedOption.textContent.trim();
+                    }
+                } else if (field.type === 'checkbox') {
+                    if (field.checked) {
+                        value = field.value || 'Sim';
+                    }
+                } else if (field.type === 'radio') {
+                    if (field.checked) {
+                        value = field.value;
+                    }
+                } else if (field.tagName === 'TEXTAREA') {
+                    value = field.value.trim();
+                } else {
+                    // Input text, email, number, date, etc.
+                    value = field.value.trim();
+                }
+                
+                // Verificar também campos de pesquisa (Search fields)
+                if (!value || value === '') {
+                    const searchField = document.getElementById(fieldId + '_Search');
+                    if (searchField && searchField.nextElementSibling) {
+                        const displayValue = searchField.nextElementSibling.textContent?.trim();
+                        if (displayValue && displayValue !== '' && !displayValue.includes('Selecione')) {
+                            value = displayValue;
+                        }
+                    }
+                }
+            }
+
+            // Adicionar aos dados capturados se tiver valor válido
+            if (value && value.length > 0 && value !== '0' && value !== 'null') {
+                capturedData[fieldId] = {
+                    label: mapping.label,
+                    value: value,
+                    category: mapping.category
+                };
+            }
+        });
+
+        this.formData = capturedData;
+        console.log('Help OTRS: Dados do formulário capturados:', this.formData);
+        return Object.keys(capturedData).length > 0;
+    }
+
+    // Encontrar editor de texto (iframe ou textarea)
+    findTextEditor() {
+        // Tentar diferentes seletores para o editor, priorizando CKEditor
+        const editorSelectors = [
+            // CKEditor iframes (Znuny/OTRS)
+            'iframe.cke_wysiwyg_frame',
+            'iframe[title*="Editor"]',
+            'iframe[title*="RichText"]', 
+            'iframe[class*="cke"]',
+            // Outros iframes de editores
+            'iframe[id*="RTE"]',
+            'iframe[name*="RTE"]',
+            'iframe[src*="ckeditor"]',
+            // Textareas como fallback
+            'textarea[id*="RTE"]',
+            'textarea[name*="Body"]',
+            'textarea[id*="Body"]',
+            '#RichText',
+            // Seletores genéricos
+            '.cke_wysiwyg_frame',
+            'iframe[allowtransparency="true"]'
+        ];
+
+        for (const selector of editorSelectors) {
+            const editor = document.querySelector(selector);
+            if (editor) {
+                // Verificar se o iframe é acessível
+                if (editor.tagName === 'IFRAME') {
+                    try {
+                        const iframeDoc = editor.contentDocument || editor.contentWindow.document;
+                        if (iframeDoc && iframeDoc.body) {
+                            console.log('Help OTRS: Editor CKEditor encontrado:', selector);
+                            return editor;
+                        }
+                    } catch (accessError) {
+                        console.log('Help OTRS: Iframe inacessível (CORS):', selector);
+                        continue;
+                    }
+                } else {
+                    console.log('Help OTRS: Editor textarea encontrado:', selector);
+                    return editor;
+                }
+            }
+        }
+
+        // Busca mais ampla por iframes que podem ser editores
+        const allIframes = document.querySelectorAll('iframe');
+        for (const iframe of allIframes) {
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc && iframeDoc.body && iframeDoc.body.isContentEditable) {
+                    console.log('Help OTRS: Editor contentEditable encontrado em iframe');
+                    return iframe;
+                }
+            } catch (e) {
+                // Ignorar iframes inacessíveis
+                continue;
+            }
+        }
+
+        console.log('Help OTRS: Editor não encontrado');
+        return null;
+    }
+
+    // Criar popup suspenso
+    createPopup() {
+        if (this.popup) {
+            this.popup.remove();
+        }
+
+        const popup = document.createElement('div');
+        popup.id = 'helpOtrsFormReuser';
+        popup.innerHTML = `
+            <div class="form-reuser-header">
+                <span class="form-reuser-title">📋 Reaproveitar Dados</span>
+                <button class="form-reuser-close" title="Fechar">&times;</button>
+            </div>
+            <div class="form-reuser-content">
+                <p class="form-reuser-description">Clique nos dados para adicionar ao texto:</p>
+                <div class="form-reuser-categories" id="formReuserCategories">
+                    <!-- Categorias serão inseridas aqui -->
+                </div>
+            </div>
+        `;
+
+        // Estilos CSS inline (para não depender de arquivo CSS externo)
+        popup.style.cssText = `
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            width: 280px;
+            max-height: 70vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: white;
+            opacity: 0;
+            transform: translateY(-50%) translateX(100px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        `;
+
+        this.popup = popup;
+        document.body.appendChild(popup);
+
+        // Adicionar estilos para elementos internos
+        this.addInternalStyles();
+
+        // Event listeners
+        popup.querySelector('.form-reuser-close').addEventListener('click', () => {
+            this.hidePopup();
+        });
+
+        // Permitir arrastar o popup
+        this.makeDraggable(popup);
+
+        return popup;
+    }
+
+    // Adicionar estilos CSS internos
+    addInternalStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            #helpOtrsFormReuser .form-reuser-header {
+                padding: 15px;
+                background: rgba(255,255,255,0.1);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                backdrop-filter: blur(5px);
+            }
+            
+            #helpOtrsFormReuser .form-reuser-title {
+                font-weight: 600;
+                font-size: 14px;
+            }
+            
+            #helpOtrsFormReuser .form-reuser-close {
+                background: none;
+                border: none;
+                color: white;
+                font-size: 20px;
+                cursor: pointer;
+                padding: 0;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.2s;
+            }
+            
+            #helpOtrsFormReuser .form-reuser-close:hover {
+                background: rgba(255,255,255,0.2);
+            }
+            
+            #helpOtrsFormReuser .form-reuser-content {
+                padding: 15px;
+                max-height: 60vh;
+                overflow-y: auto;
+            }
+            
+            #helpOtrsFormReuser .form-reuser-description {
+                margin: 0 0 15px 0;
+                font-size: 12px;
+                opacity: 0.9;
+            }
+            
+            #helpOtrsFormReuser .form-category {
+                margin-bottom: 15px;
+            }
+            
+            #helpOtrsFormReuser .form-category-title {
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                opacity: 0.8;
+                margin-bottom: 8px;
+                padding-bottom: 4px;
+                border-bottom: 1px solid rgba(255,255,255,0.2);
+            }
+            
+            #helpOtrsFormReuser .form-data-item {
+                background: rgba(255,255,255,0.1);
+                border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 8px;
+                padding: 10px;
+                margin-bottom: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-size: 13px;
+                word-wrap: break-word;
+            }
+            
+            #helpOtrsFormReuser .form-data-item:hover {
+                background: rgba(255,255,255,0.2);
+                transform: translateX(-2px);
+                box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+            }
+            
+            #helpOtrsFormReuser .form-data-item:active {
+                transform: scale(0.98);
+            }
+            
+            #helpOtrsFormReuser .form-data-label {
+                display: block;
+                font-weight: 600;
+                margin-bottom: 4px;
+            }
+            
+            #helpOtrsFormReuser .form-data-value {
+                opacity: 0.9;
+                font-size: 12px;
+            }
+            
+            #helpOtrsFormReuser .form-reuser-content::-webkit-scrollbar {
+                width: 4px;
+            }
+            
+            #helpOtrsFormReuser .form-reuser-content::-webkit-scrollbar-track {
+                background: rgba(255,255,255,0.1);
+                border-radius: 2px;
+            }
+            
+            #helpOtrsFormReuser .form-reuser-content::-webkit-scrollbar-thumb {
+                background: rgba(255,255,255,0.3);
+                border-radius: 2px;
+            }
+        `;
+        
+        document.head.appendChild(style);
+    }
+
+    // Tornar o popup arrastável
+    makeDraggable(element) {
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+        
+        const header = element.querySelector('.form-reuser-header');
+        
+        header.style.cursor = 'move';
+        
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('form-reuser-close')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = element.offsetLeft;
+            startTop = element.offsetTop;
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+        
+        function onMouseMove(e) {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            element.style.left = (startLeft + deltaX) + 'px';
+            element.style.top = (startTop + deltaY) + 'px';
+            element.style.right = 'auto';
+            element.style.transform = 'none';
+        }
+        
+        function onMouseUp() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+    }
+
+    // Popular popup com dados capturados
+    populatePopup() {
+        const categoriesContainer = this.popup.querySelector('#formReuserCategories');
+        categoriesContainer.innerHTML = '';
+
+        // Agrupar dados por categoria
+        const categories = {};
+        Object.keys(this.formData).forEach(fieldId => {
+            const data = this.formData[fieldId];
+            if (!categories[data.category]) {
+                categories[data.category] = [];
+            }
+            categories[data.category].push({ fieldId, ...data });
+        });
+
+        // Mapear nomes das categorias
+        const categoryNames = {
+            'cliente': '👤 Cliente',
+            'contato': '📞 Contato', 
+            'localizacao': '📍 Localização',
+            'patrimonio': '💼 Patrimônio',
+            'organizacional': '🏛️ Organização',
+            'adicional': '📝 Adicional',
+            'geral': '📄 Geral'
+        };
+
+        // Criar elementos para cada categoria
+        Object.keys(categories).forEach(categoryKey => {
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'form-category';
+
+            const categoryTitle = document.createElement('div');
+            categoryTitle.className = 'form-category-title';
+            categoryTitle.textContent = categoryNames[categoryKey] || categoryKey;
+            categoryDiv.appendChild(categoryTitle);
+
+            categories[categoryKey].forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'form-data-item';
+                itemDiv.innerHTML = `
+                    <div class="form-data-label">${item.label}</div>
+                    <div class="form-data-value">${item.value}</div>
+                `;
+                
+                itemDiv.addEventListener('click', async () => {
+                    await this.insertDataIntoEditor(item);
+                });
+
+                categoryDiv.appendChild(itemDiv);
+            });
+
+            categoriesContainer.appendChild(categoryDiv);
+        });
+
+        if (Object.keys(categories).length === 0) {
+            categoriesContainer.innerHTML = '<p style="opacity: 0.7; font-size: 12px; text-align: center; padding: 20px;">Nenhum dado encontrado nos formulários</p>';
+        }
+    }
+
+    // Inserir dados no editor de texto
+    async insertDataIntoEditor(item) {
+        let editor = this.targetEditor;
+        if (!editor) {
+            console.log('Help OTRS: Editor não encontrado para inserção');
+            return;
+        }
+
+        // Aguardar o editor ficar pronto se for iframe
+        if (editor.tagName === 'IFRAME') {
+            editor = await this.waitForEditorReady(editor, 3);
+        }
+
+        const textToInsert = `${item.label}: ${item.value}`;
+        
+        try {
+            // Tentar inserir no iframe (CKEditor/Znuny)
+            if (editor.tagName === 'IFRAME') {
+                const iframeDoc = editor.contentDocument || editor.contentWindow.document;
+                const body = iframeDoc.body;
+                
+                if (body) {
+                    // Focar no editor primeiro
+                    editor.contentWindow.focus();
+                    
+                    // Criar elemento de linha de dados
+                    const dataElement = iframeDoc.createElement('div');
+                    dataElement.innerHTML = `<strong>${item.label}:</strong> ${item.value}`;
+                    dataElement.style.marginBottom = '5px';
+                    
+                    // Verificar se há conteúdo existente
+                    if (body.innerHTML.trim() === '' || body.innerHTML === '<p><br></p>' || body.innerHTML === '<br>') {
+                        // Editor vazio - limpar e inserir
+                        body.innerHTML = '';
+                        body.appendChild(dataElement);
+                    } else {
+                        // Editor com conteúdo - adicionar no final
+                        
+                        // Remover últimos <br> vazios se existirem
+                        const lastElements = body.querySelectorAll('br:last-child, p:last-child:empty');
+                        lastElements.forEach(el => {
+                            if (el.innerHTML === '' || el.innerHTML === '<br>') {
+                                el.remove();
+                            }
+                        });
+                        
+                        // Adicionar quebra de linha antes do novo conteúdo
+                        const breakElement = iframeDoc.createElement('br');
+                        body.appendChild(breakElement);
+                        
+                        // Adicionar o novo dado
+                        body.appendChild(dataElement);
+                    }
+                    
+                    // Adicionar uma quebra de linha após o elemento
+                    const finalBreak = iframeDoc.createElement('br');
+                    body.appendChild(finalBreak);
+                    
+                    // Colocar cursor no final
+                    const range = iframeDoc.createRange();
+                    const selection = editor.contentWindow.getSelection();
+                    range.selectNodeContents(body);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    // Disparar evento de mudança para CKEditor
+                    const changeEvent = new iframeDoc.defaultView.Event('input', { bubbles: true });
+                    body.dispatchEvent(changeEvent);
+                    
+                    console.log('Help OTRS: Dados inseridos no CKEditor iframe:', textToInsert);
+                }
+            }
+            // Tentar inserir em textarea
+            else if (editor.tagName === 'TEXTAREA') {
+                const currentValue = editor.value;
+                const newValue = currentValue + (currentValue ? '\n' : '') + textToInsert;
+                editor.value = newValue;
+                editor.focus();
+                
+                // Disparar evento de mudança
+                const changeEvent = new Event('input', { bubbles: true });
+                editor.dispatchEvent(changeEvent);
+                
+                console.log('Help OTRS: Dados inseridos em textarea:', textToInsert);
+            }
+
+            // Feedback visual
+            this.showInsertFeedback(item);
+            
+        } catch (error) {
+            console.error('Help OTRS: Erro ao inserir dados:', error);
+            
+            // Fallback: tentar inserção simples
+            try {
+                if (editor.tagName === 'IFRAME') {
+                    const iframeDoc = editor.contentDocument || editor.contentWindow.document;
+                    if (iframeDoc && iframeDoc.body) {
+                        iframeDoc.body.innerHTML += `<br><strong>${item.label}:</strong> ${item.value}<br>`;
+                        editor.contentWindow.focus();
+                    }
+                }
+            } catch (fallbackError) {
+                console.error('Help OTRS: Erro no fallback de inserção:', fallbackError);
+            }
+        }
+    }
+
+    // Mostrar feedback de inserção
+    showInsertFeedback(item) {
+        // Criar elemento de feedback temporário
+        const feedback = document.createElement('div');
+        feedback.textContent = `✅ ${item.label} adicionado`;
+        feedback.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 10001;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        `;
+        
+        document.body.appendChild(feedback);
+        
+        // Animar entrada
+        setTimeout(() => {
+            feedback.style.opacity = '1';
+            feedback.style.transform = 'translateY(0)';
+        }, 100);
+        
+        // Remover após 2 segundos
+        setTimeout(() => {
+            feedback.style.opacity = '0';
+            feedback.style.transform = 'translateY(-20px)';
+            setTimeout(() => feedback.remove(), 300);
+        }, 2000);
+    }
+
+    // Mostrar popup
+    async showPopup() {
+        if (!this.captureFormData()) {
+            console.log('Help OTRS: Nenhum dado encontrado nos formulários');
+            return false;
+        }
+
+        this.targetEditor = this.findTextEditor();
+        if (!this.targetEditor) {
+            console.log('Help OTRS: Editor de texto não encontrado');
+            return false;
+        }
+
+        // Aguardar o editor ficar pronto se for iframe
+        if (this.targetEditor.tagName === 'IFRAME') {
+            console.log('Help OTRS: Aguardando CKEditor ficar pronto...');
+            this.targetEditor = await this.waitForEditorReady(this.targetEditor);
+        }
+
+        if (!this.popup) {
+            this.createPopup();
+        }
+
+        this.populatePopup();
+
+        // Mostrar com animação
+        setTimeout(() => {
+            this.popup.style.opacity = '1';
+            this.popup.style.transform = 'translateY(-50%) translateX(0)';
+        }, 100);
+
+        this.isVisible = true;
+        return true;
+    }
+
+    // Esconder popup
+    hidePopup() {
+        if (this.popup) {
+            this.popup.style.opacity = '0';
+            this.popup.style.transform = 'translateY(-50%) translateX(100px)';
+            
+            setTimeout(() => {
+                if (this.popup) {
+                    this.popup.remove();
+                    this.popup = null;
+                }
+            }, 300);
+        }
+        
+        this.isVisible = false;
+    }
+
+    // Alternar visibilidade
+    async togglePopup() {
+        if (this.isVisible) {
+            this.hidePopup();
+        } else {
+            await this.showPopup();
+        }
+    }
+
+    // Inicializar observador de mudanças nos formulários
+    initFormObserver() {
+        if (this.observerActive) return;
+
+        const observer = new MutationObserver((mutations) => {
+            let shouldUpdate = false;
+            
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    // Verificar se novos campos Field foram adicionados
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const fieldDivs = node.classList?.contains('Field') ? [node] : node.querySelectorAll?.('div.Field') || [];
+                            if (fieldDivs.length > 0) {
+                                console.log('Help OTRS: Novos campos Field detectados:', fieldDivs.length);
+                                shouldUpdate = true;
+                            }
+                        }
+                    });
+                } else if (mutation.type === 'attributes') {
+                    // Verificar mudanças de value em inputs
+                    if (mutation.target.tagName === 'INPUT' || mutation.target.tagName === 'SELECT' || mutation.target.tagName === 'TEXTAREA') {
+                        shouldUpdate = true;
+                    }
+                }
+            });
+
+            // Atualizar dados se popup estiver visível
+            if (shouldUpdate && this.isVisible) {
+                setTimeout(() => {
+                    console.log('Help OTRS: Atualizando dados capturados...');
+                    this.captureFormData();
+                    this.populatePopup();
+                }, 500);
+            }
+        });
+
+        // Observar mudanças no formulário
+        const form = document.querySelector('form') || document.body;
+        observer.observe(form, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['value', 'checked', 'selected']
+        });
+
+        // Também observar mudanças de input em tempo real
+        document.addEventListener('input', (event) => {
+            if (this.isVisible && (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT' || event.target.tagName === 'TEXTAREA')) {
+                clearTimeout(this.inputTimeout);
+                this.inputTimeout = setTimeout(() => {
+                    console.log('Help OTRS: Campo alterado:', event.target.id || event.target.name);
+                    this.captureFormData();
+                    this.populatePopup();
+                }, 1000); // Debounce de 1 segundo
+            }
+        });
+
+        this.observerActive = true;
+        console.log('Help OTRS: Observador de formulário iniciado com detecção de div.Field');
+    }
+
+    // Criar botão flutuante para ativar funcionalidade
+    createFloatingButton() {
+        // Remover botão existente se houver
+        const existingBtn = document.getElementById('helpOtrsReuseBtn');
+        if (existingBtn) {
+            existingBtn.remove();
+        }
+
+        const button = document.createElement('button');
+        button.id = 'helpOtrsReuseBtn';
+        button.innerHTML = '📋';
+        button.title = 'Reaproveitar dados do formulário';
+        button.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 9999;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        `;
+
+        // Efeitos hover
+        button.addEventListener('mouseenter', () => {
+            button.style.transform = 'scale(1.1)';
+            button.style.boxShadow = '0 6px 25px rgba(0,0,0,0.4)';
+        });
+
+        button.addEventListener('mouseleave', () => {
+            button.style.transform = 'scale(1)';
+            button.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
+        });
+
+        button.addEventListener('click', () => {
+            this.togglePopup();
+            // Efeito de click
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+            }, 150);
+        });
+
+        document.body.appendChild(button);
+        return button;
+    }
+
+    // Inicializar funcionalidade
+    init() {
+        if (!configManager.isFeatureEnabled('formDataReuser')) {
+            console.log('Help OTRS: Funcionalidade de reaproveitamento de dados desabilitada');
+            return;
+        }
+
+        console.log('Help OTRS: Inicializando reaproveitamento de dados do formulário');
+        
+        this.createFloatingButton();
+        this.initFormObserver();
+        
+        console.log('Help OTRS: Funcionalidade de reaproveitamento de dados inicializada');
+    }
+
+    // Limpar recursos
+    destroy() {
+        if (this.popup) {
+            this.popup.remove();
+            this.popup = null;
+        }
+        
+        const button = document.getElementById('helpOtrsReuseBtn');
+        if (button) {
+            button.remove();
+        }
+        
+        this.isVisible = false;
+        this.observerActive = false;
+    }
+}
+
+// Instância global do reaproveitador de dados
+const formDataReuser = new FormDataReuser();
+
+// ========================================
+// FIM DA FUNCIONALIDADE: REAPROVEITAR DADOS
+// ========================================
+
 async function init() {
     console.log('=== INIT FUNCTION START ===');
     
@@ -1126,6 +2115,13 @@ async function init() {
         if (!queue) {
             addDivAlert();
         }
+    }
+    
+    // Inicializar reaproveitamento de dados do formulário
+    if (configManager.isFeatureEnabled('formDataReuser')) {
+        setTimeout(() => {
+            formDataReuser.init();
+        }, 1000); // Aguardar carregamento completo da página
     }
     
     console.log('✅ Help OTRS: Inicialização concluída com sucesso');

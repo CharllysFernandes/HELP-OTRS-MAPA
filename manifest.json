@@ -2,8 +2,8 @@
     "manifest_version": 3,
     "name": "Help Otrs - MAPA",
     "description": "Ferramenta de alerta configurável para sistemas OTRS (MAPA, SFB, MT, etc).",
-    "version": "2.1.0",
-    "version_name": "2.1.0 - Validação de Filas e Normalização",
+    "version": "2.2.0",
+    "version_name": "2.2.0 - Reaproveitamento de Dados do Formulário",
     "author": "João Felipe Lima e Charllys Fernandes",
     "background": {
         "service_worker": "background.js"

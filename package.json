@@ -1,6 +1,6 @@
 {
     "name": "help-otrs-mapa",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "description": "Extensão Help OTRS para sistemas MAPA - Ferramenta de alerta configurável",
     "main": "background.js",
     "scripts": {

@@ -5,7 +5,8 @@ const DEFAULT_CONFIG = {
         alertsEnabled: true,
         typeOfServiceAlerts: true,
         serviceClassificationAlerts: true,
-        queueValidation: true
+        queueValidation: true,
+        formDataReuser: true
     },
     advanced: {
         delayTime: 500
@@ -169,6 +170,7 @@ function renderFeatures() {
     document.getElementById('typeOfServiceAlerts').checked = features.typeOfServiceAlerts;
     document.getElementById('serviceClassificationAlerts').checked = features.serviceClassificationAlerts;
     document.getElementById('queueValidation').checked = features.queueValidation;
+    document.getElementById('formDataReuser').checked = features.formDataReuser;
 }
 
 // Renderizar configurações avançadas
@@ -205,6 +207,7 @@ function setupEventListeners() {
     document.getElementById('typeOfServiceAlerts').addEventListener('change', updateFeature);
     document.getElementById('serviceClassificationAlerts').addEventListener('change', updateFeature);
     document.getElementById('queueValidation').addEventListener('change', updateFeature);
+    document.getElementById('formDataReuser').addEventListener('change', updateFeature);
     
     // Input de delay
     document.getElementById('delayTime').addEventListener('change', updateAdvancedSetting);
