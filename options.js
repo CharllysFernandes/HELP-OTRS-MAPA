@@ -32,8 +32,25 @@ document.addEventListener('DOMContentLoaded', function() {
     loadConfiguration();
     setupEventListeners();
     
-    // Manter função closeEditModal global para uso no HTML
-    window.closeEditModal = closeEditModal;
+    // Listener para mudanças automáticas de configuração
+    chrome.storage.onChanged.addListener(function(changes, namespace) {
+        if (namespace === 'sync' && changes.helpOtrsConfig) {
+            const oldConfig = changes.helpOtrsConfig.oldValue;
+            const newConfig = changes.helpOtrsConfig.newValue;
+            
+            // Se não foi uma mudança feita por esta página (detectar pelo timestamp)
+            if (oldConfig && newConfig && JSON.stringify(oldConfig) !== JSON.stringify(newConfig)) {
+                // Recarregar a configuração
+                currentConfig = newConfig;
+                renderOtrsSystems();
+                renderFeatures();
+                renderAdvancedSettings();
+                
+                // Mostrar alerta de sincronização
+                showAutoSyncAlert('Configurações sincronizadas de outra aba');
+            }
+        }
+    });
 });
 
 // Carregar configurações
@@ -95,26 +112,6 @@ async function createOtrsItem(system) {
     div.className = `otrs-item ${!system.enabled ? 'disabled' : ''}`;
     div.dataset.id = system.id;
 
-    // Verificar permissões para este sistema
-    let hasPermissions = false;
-    try {
-        const response = await chrome.runtime.sendMessage({
-            type: 'CHECK_PERMISSIONS',
-            url: system.baseUrl
-        });
-        hasPermissions = response.hasPermissions;
-    } catch (error) {
-        console.error('Erro ao verificar permissões:', error);
-    }
-
-    const permissionStatus = hasPermissions 
-        ? '<span class="permission-status granted">✅ Permissões concedidas</span>'
-        : '<span class="permission-status denied">❌ Sem permissões</span>';
-    
-    const permissionButton = !hasPermissions 
-        ? `<button type="button" class="btn-small grant-permissions-btn" data-system-id="${system.id}" data-url="${system.baseUrl}">🔓 Conceder Permissões</button>`
-        : '';
-
     div.innerHTML = `
         <div class="otrs-header">
             <div class="otrs-name">${system.name}</div>
@@ -124,7 +121,6 @@ async function createOtrsItem(system) {
                            data-system-id="${system.id}" class="toggle-system">
                     <span class="slider"></span>
                 </label>
-                ${permissionButton}
                 <button type="button" class="btn-small edit-system-btn" data-system-id="${system.id}">
                     ✏️ Editar
                 </button>
@@ -136,7 +132,6 @@ async function createOtrsItem(system) {
         <div class="otrs-info">
             <div><strong>URL Base:</strong> ${system.baseUrl}</div>
             <div><strong>Perfil de Usuário:</strong> ${system.userProfile}</div>
-            <div><strong>Status:</strong> ${permissionStatus}</div>
         </div>
     `;
 
@@ -144,7 +139,6 @@ async function createOtrsItem(system) {
     const toggleCheckbox = div.querySelector('.toggle-system');
     const editBtn = div.querySelector('.edit-system-btn');
     const removeBtn = div.querySelector('.remove-system-btn');
-    const grantPermissionsBtn = div.querySelector('.grant-permissions-btn');
     
     if (toggleCheckbox) {
         toggleCheckbox.addEventListener('change', function() {
@@ -161,23 +155,6 @@ async function createOtrsItem(system) {
     if (removeBtn) {
         removeBtn.addEventListener('click', function() {
             removeOtrsSystem(system.id);
-        });
-    }
-    
-    if (grantPermissionsBtn) {
-        grantPermissionsBtn.addEventListener('click', async function() {
-            const btn = this;
-            btn.disabled = true;
-            btn.textContent = '🔄 Solicitando...';
-            
-            const granted = await requestPermissionsForSystem(system.baseUrl);
-            if (granted) {
-                // Atualizar a interface para mostrar que as permissões foram concedidas
-                renderOtrsSystems();
-            }
-            
-            btn.disabled = false;
-            btn.textContent = '🔓 Conceder Permissões';
         });
     }
 
@@ -212,6 +189,10 @@ function setupEventListeners() {
     
     // Botão salvar edição
     document.getElementById('saveEditBtn').addEventListener('click', saveEditedSystem);
+    
+    // Botões para fechar modal
+    document.getElementById('closeModalBtn').addEventListener('click', closeEditModal);
+    document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
     
     // Botão salvar
     document.getElementById('saveBtn').addEventListener('click', saveConfiguration);
@@ -386,7 +367,9 @@ async function loadUserProfiles() {
 
         availableProfiles = options;
         populateProfileSelect(availableProfiles);
-        showStatus(`Perfis carregados com sucesso! (${options.length} perfis encontrados)`, 'success');
+        
+        // Usar alerta personalizado para carregamento de perfis
+        showSaveAlert(`🔄 Perfis carregados com sucesso! (${options.length} perfis encontrados)`);
         
     } catch (error) {
         console.error('Erro detalhado ao carregar perfis:', error);
@@ -484,29 +467,6 @@ function isValidUrl(string) {
         return false;
     }
 }
-// Função para solicitar permissões para uma URL
-async function requestPermissionsForSystem(baseUrl) {
-    try {
-        showStatus('Solicitando permissões para acesso ao sistema...', 'info');
-        
-        const response = await chrome.runtime.sendMessage({
-            type: 'REQUEST_PERMISSIONS',
-            url: baseUrl
-        });
-        
-        if (response.success) {
-            showStatus('Permissões concedidas! A extensão pode acessar este sistema.', 'success');
-            return true;
-        } else {
-            showStatus('Permissões negadas. A extensão não funcionará neste sistema até que as permissões sejam concedidas.', 'warning');
-            return false;
-        }
-    } catch (error) {
-        console.error('Erro ao solicitar permissões:', error);
-        showStatus('Erro ao solicitar permissões. Tente novamente.', 'error');
-        return false;
-    }
-}
 
 // Adicionar sistema OTRS
 async function addOtrsSystem() {
@@ -538,16 +498,12 @@ async function addOtrsSystem() {
 
     const normalizedUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
     
-    // Solicitar permissões para o novo sistema
-    const permissionsGranted = await requestPermissionsForSystem(normalizedUrl);
-
     const newSystem = {
         id: generateId(),
         name: name,
         baseUrl: normalizedUrl,
         userProfile: selectedProfile,
-        enabled: true,
-        hasPermissions: permissionsGranted
+        enabled: true
     };
 
     currentConfig.otrs_systems.push(newSystem);
@@ -562,11 +518,8 @@ async function addOtrsSystem() {
     
     await renderOtrsSystems();
     
-    if (permissionsGranted) {
-        showStatus('Sistema OTRS adicionado com sucesso! Permissões concedidas.', 'success');
-    } else {
-        showStatus('Sistema OTRS adicionado, mas sem permissões. Clique em "Conceder Permissões" para habilitá-lo.', 'warning');
-    }
+    // Usar alerta personalizado para adicionar sistema
+    showSaveAlert(`✅ Sistema "${name}" adicionado com sucesso!`);
 }
 
 // Alternar sistema OTRS
@@ -575,6 +528,13 @@ function toggleOtrsSystem(id, enabled) {
     if (system) {
         system.enabled = enabled;
         renderOtrsSystems();
+        
+        // Mostrar alerta personalizado para toggle
+        if (enabled) {
+            showSaveAlert(`✅ Sistema "${system.name}" habilitado!`);
+        } else {
+            showRemoveAlert(`⚠️ Sistema "${system.name}" desabilitado!`);
+        }
     }
 }
 
@@ -602,6 +562,17 @@ function editOtrsSystem(id) {
 
     // Guardar o ID do sistema sendo editado
     editingSystemId = id;
+    
+    // Popular o select do perfil com opções padrão
+    const editProfileSelect = document.getElementById('editUserProfile');
+    editProfileSelect.innerHTML = `
+        <option value="">Selecione o perfil...</option>
+        <option value="Cliente">Cliente</option>
+        <option value="CSC">CSC</option>
+        <option value="Nível 1">Nível 1</option>
+        <option value="Nível 2">Nível 2</option>
+        <option value="Nível 3">Nível 3</option>
+    `;
     
     // Preencher os campos do modal com os dados atuais
     document.getElementById('editOtrsName').value = system.name;
@@ -643,7 +614,9 @@ function saveEditedSystem() {
         
         renderOtrsSystems();
         closeEditModal();
-        showStatus('Sistema OTRS atualizado com sucesso!', 'success');
+        
+        // Mostrar alerta personalizado de sucesso
+        showSaveAlert(`Sistema "${name}" atualizado com sucesso!`);
     } else {
         showStatus('Erro ao atualizar sistema', 'error');
     }
@@ -651,6 +624,7 @@ function saveEditedSystem() {
 
 // Fechar modal de edição
 function closeEditModal() {
+    console.log('closeEditModal chamada');
     document.getElementById('editModal').style.display = 'none';
     document.body.style.overflow = 'auto'; // Restaurar scroll da página
     editingSystemId = null;
@@ -710,7 +684,9 @@ function removeOtrsSystem(id) {
     // Remover o sistema
     currentConfig.otrs_systems = currentConfig.otrs_systems.filter(s => s.id !== id);
     renderOtrsSystems();
-    showStatus(`Sistema "${system.name}" removido com sucesso`, 'success');
+    
+    // Mostrar alerta personalizado de remoção
+    showRemoveAlert(`Sistema "${system.name}" removido com sucesso!`);
     
     console.log('Sistema removido com sucesso');
     
@@ -748,8 +724,34 @@ function updateAdvancedSetting(event) {
 // Salvar configurações
 async function saveConfiguration() {
     try {
+        // Verificar se não há nenhum sistema habilitado
+        const enabledSystems = currentConfig.otrs_systems.filter(s => s.enabled);
+        
+        if (currentConfig.otrs_systems.length > 0 && enabledSystems.length === 0) {
+            const confirmSave = confirm(
+                '⚠️ ATENÇÃO: Nenhum sistema OTRS está habilitado!\n\n' +
+                'A extensão não funcionará até que você habilite pelo menos um sistema.\n\n' +
+                'Deseja salvar mesmo assim?'
+            );
+            
+            if (!confirmSave) {
+                return;
+            }
+        }
+        
         await chrome.storage.sync.set({ helpOtrsConfig: currentConfig });
-        showStatus('Configurações salvas com sucesso!', 'success');
+        
+        // Detectar quantos sistemas estão habilitados para mostrar informação detalhada
+        let message = '✅ Configurações salvas com sucesso!';
+        
+        if (enabledSystems.length > 0) {
+            message += ` (${enabledSystems.length} sistema${enabledSystems.length > 1 ? 's' : ''} habilitado${enabledSystems.length > 1 ? 's' : ''})`;
+        } else if (currentConfig.otrs_systems.length > 0) {
+            message = '⚠️ Configurações salvas! Lembre-se de habilitar pelo menos um sistema OTRS.';
+        }
+        
+        // Usar alerta personalizado de salvamento
+        showSaveAlert(message);
         
         // Notificar content scripts sobre mudanças
         chrome.tabs.query({}, function(tabs) {
@@ -766,7 +768,7 @@ async function saveConfiguration() {
         });
     } catch (error) {
         console.error('Erro ao salvar configurações:', error);
-        showStatus('Erro ao salvar configurações', 'error');
+        showStatus('❌ Erro ao salvar configurações', 'error');
     }
 }
 
@@ -784,10 +786,11 @@ async function resetConfiguration() {
         renderFeatures();
         renderAdvancedSettings();
         
-        showStatus('Configurações restauradas para o padrão', 'success');
+        // Usar alerta personalizado para reset
+        showSaveAlert('🔄 Configurações restauradas para o padrão');
     } catch (error) {
         console.error('Erro ao resetar configurações:', error);
-        showStatus('Erro ao resetar configurações', 'error');
+        showStatus('❌ Erro ao resetar configurações', 'error');
     }
 }
 
@@ -801,6 +804,118 @@ function showStatus(message, type) {
         statusDiv.textContent = '';
         statusDiv.className = 'status';
     }, 3000);
+}
+
+// Exibir alerta personalizado de salvamento
+function showSaveAlert(message) {
+    // Remover alerta existente se houver
+    const existingAlert = document.querySelector('.save-alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // Criar elemento do alerta
+    const alert = document.createElement('div');
+    alert.className = 'save-alert';
+    alert.innerHTML = `
+        <span class="save-alert-text">${message}</span>
+    `;
+    
+    // Adicionar ao body
+    document.body.appendChild(alert);
+    
+    // Mostrar com animação
+    setTimeout(() => {
+        alert.classList.add('show');
+    }, 100);
+    
+    // Ocultar após 3 segundos
+    setTimeout(() => {
+        alert.classList.remove('show');
+        alert.classList.add('hide');
+        
+        // Remover do DOM após animação
+        setTimeout(() => {
+            if (alert && alert.parentNode) {
+                alert.remove();
+            }
+        }, 400);
+    }, 3000);
+}
+
+// Exibir alerta personalizado de configuração automática
+function showAutoSyncAlert(message) {
+    // Remover alerta existente se houver
+    const existingAlert = document.querySelector('.save-alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // Criar elemento do alerta (usando estilo de save mas com ícone diferente)
+    const alert = document.createElement('div');
+    alert.className = 'save-alert';
+    alert.style.background = 'linear-gradient(135deg, #17a2b8 0%, #117a8b 100%)';
+    alert.innerHTML = `
+        <span class="save-alert-text">🔄 ${message}</span>
+    `;
+    
+    // Adicionar ao body
+    document.body.appendChild(alert);
+    
+    // Mostrar com animação
+    setTimeout(() => {
+        alert.classList.add('show');
+    }, 100);
+    
+    // Ocultar após 2.5 segundos (um pouco menos para sync automático)
+    setTimeout(() => {
+        alert.classList.remove('show');
+        alert.classList.add('hide');
+        
+        // Remover do DOM após animação
+        setTimeout(() => {
+            if (alert && alert.parentNode) {
+                alert.remove();
+            }
+        }, 400);
+    }, 2500);
+}
+
+// Exibir alerta personalizado de remoção
+function showRemoveAlert(message) {
+    // Remover alerta existente se houver
+    const existingAlert = document.querySelector('.remove-alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // Criar elemento do alerta
+    const alert = document.createElement('div');
+    alert.className = 'remove-alert';
+    alert.innerHTML = `
+        <span class="remove-alert-text">${message}</span>
+    `;
+    
+    // Adicionar ao body
+    document.body.appendChild(alert);
+    
+    // Mostrar com animação
+    setTimeout(() => {
+        alert.classList.add('show');
+    }, 100);
+    
+    // Ocultar após 4 segundos (um pouco mais tempo para remoção)
+    setTimeout(() => {
+        alert.classList.remove('show');
+        alert.classList.add('hide');
+        
+        // Remover do DOM após animação
+        setTimeout(() => {
+            if (alert && alert.parentNode) {
+                alert.remove();
+            }
+        }, 400);
+    }, 4000);
 }
 
 // Gerar ID único

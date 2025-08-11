@@ -70,87 +70,8 @@ chrome.action.onClicked.addListener(function(tab) {
 
 // Background script para lidar com requisições cross-origin
 
-// Função para gerenciar permissões dinâmicas
-async function requestPermissionsForUrl(url) {
-    try {
-        const urlObj = new URL(url);
-        const origin = `${urlObj.protocol}//${urlObj.hostname}`;
-        const permissions = [origin + '/*'];
-        
-        console.log('Background: Solicitando permissões para:', permissions);
-        
-        const granted = await chrome.permissions.request({
-            origins: permissions
-        });
-        
-        if (granted) {
-            console.log('Background: Permissões concedidas para:', origin);
-            
-            // Registrar content script dinamicamente para esta origem
-            try {
-                await chrome.scripting.registerContentScripts([{
-                    id: `otrs-${urlObj.hostname.replace(/\./g, '-')}`,
-                    matches: [origin + '/otrs/*'],
-                    js: ['script.js'],
-                    runAt: 'document_end'
-                }]);
-                console.log('Background: Content script registrado para:', origin);
-            } catch (error) {
-                console.log('Background: Content script já registrado ou erro:', error.message);
-            }
-        }
-        
-        return granted;
-    } catch (error) {
-        console.error('Background: Erro ao solicitar permissões:', error);
-        return false;
-    }
-}
-
-// Função para verificar permissões existentes
-async function checkPermissionsForUrl(url) {
-    try {
-        const urlObj = new URL(url);
-        const origin = `${urlObj.protocol}//${urlObj.hostname}`;
-        
-        const hasPermission = await chrome.permissions.contains({
-            origins: [origin + '/*']
-        });
-        
-        console.log('Background: Permissão para', origin, ':', hasPermission);
-        return hasPermission;
-    } catch (error) {
-        console.error('Background: Erro ao verificar permissões:', error);
-        return false;
-    }
-}
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Background: Mensagem recebida:', request);
-    
-    if (request.type === 'REQUEST_PERMISSIONS') {
-        requestPermissionsForUrl(request.url)
-            .then(granted => {
-                sendResponse({ success: granted });
-            })
-            .catch(error => {
-                console.error('Background: Erro ao solicitar permissões:', error);
-                sendResponse({ success: false, error: error.message });
-            });
-        return true;
-    }
-    
-    if (request.type === 'CHECK_PERMISSIONS') {
-        checkPermissionsForUrl(request.url)
-            .then(hasPermission => {
-                sendResponse({ hasPermission });
-            })
-            .catch(error => {
-                console.error('Background: Erro ao verificar permissões:', error);
-                sendResponse({ hasPermission: false, error: error.message });
-            });
-        return true;
-    }
     
     if (request.type === 'FETCH_PROFILES') {
         fetchProfiles(request.url, request.baseUrl)

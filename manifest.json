@@ -24,13 +24,6 @@
         "scripting",
         "storage"
     ],
-    "optional_permissions": [
-        "tabs"
-    ],
-    "optional_host_permissions": [
-        "http://*/*",
-        "https://*/*"
-    ],
     "host_permissions": [
         "http://*.com.br/otrs/*",
         "https://*.com.br/otrs/*"

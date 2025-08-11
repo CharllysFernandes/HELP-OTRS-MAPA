@@ -25,7 +25,12 @@ class ConfigManager {
             'level 1': 'Nível 1',
 
             'Técnico Presencial': 'Nível 2',
-            'Técnico Presencialx': 'Nível 2',            
+            'Técnico Presencialx': 'Nível 2',
+            'Técnico Local': 'Nível 2',
+            'Tecnico Local': 'Nível 2',
+            'técnico local': 'Nível 2',
+            'tecnico local': 'Nível 2',
+            'local': 'Nível 2',            
             'técnico presencial': 'Nível 2',
             'tecnico presencial': 'Nível 2',
             'presencial': 'Nível 2',
@@ -293,6 +298,120 @@ window.helpOtrsDebug = {
         const result = configManager.compareUserLevels(level1, level2);
         console.log('São iguais?', result ? '✅ SIM' : '❌ NÃO');
         return result;
+    },
+    debugCurrentLevel: () => {
+        console.log('=== DEBUG DO NÍVEL ATUAL ===');
+        console.log('URL atual:', window.location.href);
+        
+        // Teste 1: Elemento de seleção da fila
+        const destSelection = document.querySelector("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text");
+        console.log('Elemento .InputField_Selection .Text:', destSelection?.textContent);
+        
+        // Teste 2: Select oculto
+        const destSelect = document.querySelector("#Dest");
+        if (destSelect && destSelect.selectedOptions.length > 0) {
+            console.log('Select option texto:', destSelect.selectedOptions[0].textContent);
+            console.log('Select option valor:', destSelect.selectedOptions[0].value);
+        }
+        
+        // Teste 3: Método original
+        const elements = document.querySelectorAll(".InputField_Selection");
+        console.log('Elementos .InputField_Selection encontrados:', elements.length);
+        elements.forEach((el, index) => {
+            console.log(`Elemento ${index}:`, el.textContent);
+        });
+        
+        // Resultado final
+        const currentLevel = getCurrentLevel();
+        console.log('Nível final capturado:', currentLevel);
+        
+        return currentLevel;
+    },
+    testLocalTechnicianValidation: () => {
+        console.log('=== TESTE DE VALIDAÇÃO TÉCNICO LOCAL ===');
+        console.log('URL atual:', window.location.href);
+        
+        const isLocalQueue = isLocalTechnicianQueue();
+        const isPresencial = isTypeOfServicePresencial();
+        const alertExists = isLocalTechnicianAlertAdded();
+        
+        console.log('Fila é Técnico Local:', isLocalQueue ? '✅ SIM' : '❌ NÃO');
+        console.log('Tipo é Presencial:', isPresencial ? '✅ SIM' : '❌ NÃO');
+        console.log('Alerta existe:', alertExists ? '✅ SIM' : '❌ NÃO');
+        
+        // Elementos de debug
+        const destSelection = document.querySelector("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text");
+        console.log('Texto da fila selecionada:', destSelection?.textContent);
+        
+        const serviceSelect = document.querySelector("#DynamicField_PRITipoAtendimento");
+        console.log('Valor do select tipo atendimento:', serviceSelect?.value);
+        
+        const serviceSearch = document.querySelector("#DynamicField_PRITipoAtendimento_Search");
+        console.log('Campo de pesquisa tipo atendimento:', serviceSearch?.nextElementSibling?.textContent);
+        
+        console.log('Deveria mostrar alerta:', (isLocalQueue && !isPresencial) ? '✅ SIM' : '❌ NÃO');
+        
+        return {
+            isLocalQueue,
+            isPresencial,
+            alertExists,
+            shouldShowAlert: isLocalQueue && !isPresencial
+        };
+    },
+    testRemoteTechnicianValidation: () => {
+        console.log('=== TESTE DE VALIDAÇÃO TÉCNICO REMOTO/NÍVEL 1 ===');
+        console.log('URL atual:', window.location.href);
+        
+        const isRemoteQueue = isRemoteTechnicianQueue();
+        const isRemoto = isTypeOfServiceRemoto();
+        const alertExists = isRemoteTechnicianAlertAdded();
+        
+        console.log('Fila é Técnico Remoto/Nível 1:', isRemoteQueue ? '✅ SIM' : '❌ NÃO');
+        console.log('Tipo é Remoto:', isRemoto ? '✅ SIM' : '❌ NÃO');
+        console.log('Alerta existe:', alertExists ? '✅ SIM' : '❌ NÃO');
+        
+        // Elementos de debug
+        const destSelection = document.querySelector("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text");
+        console.log('Texto da fila selecionada:', destSelection?.textContent);
+        if (destSelection) {
+            const normalizedLevel = configManager.normalizeUserLevel(destSelection.textContent.trim());
+            console.log('Nível normalizado:', normalizedLevel);
+        }
+        
+        const serviceSelect = document.querySelector("#DynamicField_PRITipoAtendimento");
+        console.log('Valor do select tipo atendimento:', serviceSelect?.value);
+        
+        const serviceSearch = document.querySelector("#DynamicField_PRITipoAtendimento_Search");
+        console.log('Campo de pesquisa tipo atendimento:', serviceSearch?.nextElementSibling?.textContent);
+        
+        console.log('Deveria mostrar alerta:', (isRemoteQueue && !isRemoto) ? '✅ SIM' : '❌ NÃO');
+        
+        return {
+            isRemoteQueue,
+            isRemoto,
+            alertExists,
+            shouldShowAlert: isRemoteQueue && !isRemoto
+        };
+    },
+    testAllServiceTypeValidation: () => {
+        console.log('=== TESTE COMPLETO DE VALIDAÇÃO DE TIPO DE ATENDIMENTO ===');
+        const localTest = helpOtrsDebug.testLocalTechnicianValidation();
+        const remoteTest = helpOtrsDebug.testRemoteTechnicianValidation();
+        
+        return {
+            local: localTest,
+            remote: remoteTest
+        };
+    },
+    forceValidateLocalTechnician: () => {
+        console.log('🔄 Forçando validação de Técnico Local...');
+        validateLocalTechnicianServiceType();
+        return helpOtrsDebug.testLocalTechnicianValidation();
+    },
+    forceValidateServiceType: () => {
+        console.log('🔄 Forçando validação completa de tipo de atendimento...');
+        validateServiceTypeForQueue();
+        return helpOtrsDebug.testAllServiceTypeValidation();
     }
 };
 
@@ -386,6 +505,210 @@ function removeTypeOfServiceAlert() {
     }
 }
 
+function addAlertToLocalTechnician() {
+    if (!configManager.isFeatureEnabled('typeOfServiceAlerts')) return;
+
+    const span = document.createElement("span");
+    span.id = "LocalTechnicianAlert";
+    span.textContent = "⚠️ Para fila de Técnico Local, o tipo de atendimento deve ser 'Presencial'.";
+    span.style.color = "red";
+    span.style.fontWeight = "bold";
+    span.style.display = "block";
+    span.style.marginTop = "5px";
+
+    const targetElement = document.querySelector(".Row.Row_DynamicField_PRITipoAtendimento")?.children[1];
+    if (targetElement) {
+        targetElement.appendChild(span);
+    }
+}
+
+function isLocalTechnicianAlertAdded() {
+    return document.querySelector("#LocalTechnicianAlert") !== null;
+}
+
+function removeLocalTechnicianAlert() {
+    const alert = document.querySelector("#LocalTechnicianAlert");
+    if (alert) {
+        alert.remove();
+    }
+}
+
+function addAlertToRemoteTechnician() {
+    if (!configManager.isFeatureEnabled('typeOfServiceAlerts')) return;
+
+    const span = document.createElement("span");
+    span.id = "RemoteTechnicianAlert";
+    span.textContent = "⚠️ Para fila de Técnico Remoto, o tipo de atendimento deve ser 'Remoto'.";
+    span.style.color = "red";
+    span.style.fontWeight = "bold";
+    span.style.display = "block";
+    span.style.marginTop = "5px";
+
+    const targetElement = document.querySelector(".Row.Row_DynamicField_PRITipoAtendimento")?.children[1];
+    if (targetElement) {
+        targetElement.appendChild(span);
+    }
+}
+
+function isRemoteTechnicianAlertAdded() {
+    return document.querySelector("#RemoteTechnicianAlert") !== null;
+}
+
+function removeRemoteTechnicianAlert() {
+    const alert = document.querySelector("#RemoteTechnicianAlert");
+    if (alert) {
+        alert.remove();
+    }
+}
+
+function isRemoteTechnicianQueue() {
+    // Verificar se a fila selecionada é "Técnico Remoto" ou variações de Nível 1
+    const destSelection = document.querySelector("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text");
+    if (destSelection) {
+        const queueText = destSelection.textContent.trim();
+        console.log('Help OTRS: Verificando fila para Técnico Remoto/Nível 1:', queueText);
+        
+        // Normalizar o nível da fila usando o ConfigManager
+        const normalizedLevel = configManager.normalizeUserLevel(queueText);
+        console.log('Help OTRS: Nível normalizado:', normalizedLevel);
+        
+        return normalizedLevel === "Nível 1";
+    }
+    
+    // Fallback: verificar no select oculto
+    const destSelect = document.querySelector("#Dest");
+    if (destSelect && destSelect.selectedOptions.length > 0) {
+        const selectedOption = destSelect.selectedOptions[0];
+        const queueText = selectedOption.textContent.trim();
+        console.log('Help OTRS: Verificando fila (select) para Técnico Remoto/Nível 1:', queueText);
+        
+        // Normalizar o nível da fila usando o ConfigManager
+        const normalizedLevel = configManager.normalizeUserLevel(queueText);
+        console.log('Help OTRS: Nível normalizado (select):', normalizedLevel);
+        
+        return normalizedLevel === "Nível 1";
+    }
+    
+    return false;
+}
+
+function isTypeOfServiceRemoto() {
+    // Verificar se o tipo de atendimento está definido como "Remoto"
+    const serviceSelect = document.querySelector("#DynamicField_PRITipoAtendimento");
+    if (serviceSelect) {
+        const selectedValue = serviceSelect.value;
+        console.log('Help OTRS: Tipo de atendimento atual:', selectedValue);
+        return selectedValue === "R"; // "R" para Remoto
+    }
+    
+    // Verificar pelo campo de pesquisa visível
+    const serviceSearch = document.querySelector("#DynamicField_PRITipoAtendimento_Search");
+    if (serviceSearch && serviceSearch.nextElementSibling) {
+        const selectedText = serviceSearch.nextElementSibling.textContent?.trim();
+        console.log('Help OTRS: Tipo de atendimento visível:', selectedText);
+        return selectedText === "Remoto";
+    }
+    
+    return false;
+}
+
+function isLocalTechnicianQueue() {
+    // Verificar se a fila selecionada é "Técnico Local"
+    const destSelection = document.querySelector("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text");
+    if (destSelection) {
+        const queueText = destSelection.textContent.trim();
+        console.log('Help OTRS: Verificando fila para Técnico Local:', queueText);
+        return queueText === "Técnico Local" || queueText === "Tecnico Local";
+    }
+    
+    // Fallback: verificar no select oculto
+    const destSelect = document.querySelector("#Dest");
+    if (destSelect && destSelect.selectedOptions.length > 0) {
+        const selectedOption = destSelect.selectedOptions[0];
+        const queueText = selectedOption.textContent.trim();
+        console.log('Help OTRS: Verificando fila (select) para Técnico Local:', queueText);
+        return queueText.includes("Técnico Local") || queueText.includes("Tecnico Local");
+    }
+    
+    return false;
+}
+
+function isTypeOfServicePresencial() {
+    // Verificar se o tipo de atendimento está definido como "Presencial"
+    const serviceSelect = document.querySelector("#DynamicField_PRITipoAtendimento");
+    if (serviceSelect) {
+        const selectedValue = serviceSelect.value;
+        console.log('Help OTRS: Tipo de atendimento atual:', selectedValue);
+        return selectedValue === "P"; // "P" para Presencial
+    }
+    
+    // Verificar pelo campo de pesquisa visível
+    const serviceSearch = document.querySelector("#DynamicField_PRITipoAtendimento_Search");
+    if (serviceSearch && serviceSearch.nextElementSibling) {
+        const selectedText = serviceSearch.nextElementSibling.textContent?.trim();
+        console.log('Help OTRS: Tipo de atendimento visível:', selectedText);
+        return selectedText === "Presencial";
+    }
+    
+    return false;
+}
+
+function validateLocalTechnicianServiceType() {
+    if (!configManager.isFeatureEnabled('typeOfServiceAlerts')) return;
+
+    const isLocalQueue = isLocalTechnicianQueue();
+    const isPresencial = isTypeOfServicePresencial();
+    const alertExists = isLocalTechnicianAlertAdded();
+    
+    console.log('Help OTRS: Validação Técnico Local:', {
+        isLocalQueue,
+        isPresencial,
+        alertExists
+    });
+    
+    if (isLocalQueue && !isPresencial) {
+        // Fila é Técnico Local mas tipo não é Presencial - mostrar alerta
+        if (!alertExists) {
+            addAlertToLocalTechnician();
+        }
+    } else if (alertExists) {
+        // Condições não se aplicam mais - remover alerta
+        removeLocalTechnicianAlert();
+    }
+}
+
+function validateRemoteTechnicianServiceType() {
+    if (!configManager.isFeatureEnabled('typeOfServiceAlerts')) return;
+
+    const isRemoteQueue = isRemoteTechnicianQueue();
+    const isRemoto = isTypeOfServiceRemoto();
+    const alertExists = isRemoteTechnicianAlertAdded();
+    
+    console.log('Help OTRS: Validação Técnico Remoto/Nível 1:', {
+        isRemoteQueue,
+        isRemoto,
+        alertExists
+    });
+    
+    if (isRemoteQueue && !isRemoto) {
+        // Fila é Técnico Remoto/Nível 1 mas tipo não é Remoto - mostrar alerta
+        if (!alertExists) {
+            addAlertToRemoteTechnician();
+        }
+    } else if (alertExists) {
+        // Condições não se aplicam mais - remover alerta
+        removeRemoteTechnicianAlert();
+    }
+}
+
+function validateServiceTypeForQueue() {
+    if (!configManager.isFeatureEnabled('typeOfServiceAlerts')) return;
+
+    // Validar ambos os casos
+    validateLocalTechnicianServiceType();
+    validateRemoteTechnicianServiceType();
+}
+
 function addAlertToServiceClassification() {
     if (!configManager.isFeatureEnabled('serviceClassificationAlerts')) return;
 
@@ -405,14 +728,34 @@ function addAlertToServiceClassification() {
 }
 
 function getCurrentLevel() {
-    const elements = document.querySelectorAll(".InputField_Selection");
-    if (elements.length < 4) return null;
-
-    let level = elements[3].textContent.split(" -")[0];
-    level = level.replace("l", "l ");
+    // Primeira tentativa: buscar pelo elemento de seleção da fila
+    const destSelection = document.querySelector("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text");
+    if (destSelection) {
+        let level = destSelection.textContent.trim();
+        console.log('Help OTRS: Nível capturado do destino:', level);
+        return configManager.normalizeUserLevel(level);
+    }
     
-    // Normalizar o nível usando o ConfigManager
-    return configManager.normalizeUserLevel(level);
+    // Segunda tentativa: buscar no select oculto
+    const destSelect = document.querySelector("#Dest");
+    if (destSelect && destSelect.selectedOptions.length > 0) {
+        const selectedOption = destSelect.selectedOptions[0];
+        let level = selectedOption.textContent.trim().replace(/\s+/g, ' ');
+        console.log('Help OTRS: Nível capturado do select:', level);
+        return configManager.normalizeUserLevel(level);
+    }
+    
+    // Terceira tentativa: método original (fallback)
+    const elements = document.querySelectorAll(".InputField_Selection");
+    if (elements.length >= 4) {
+        let level = elements[3].textContent.split(" -")[0];
+        level = level.replace("l", "l ");
+        console.log('Help OTRS: Nível capturado pelo método original:', level);
+        return configManager.normalizeUserLevel(level);
+    }
+    
+    console.log('Help OTRS: Não foi possível capturar o nível atual');
+    return null;
 }
 
 function addAlertToQueue(level, currentLevel) {
@@ -506,7 +849,10 @@ function setMutationObserverToServiceDiv(level) {
                 const currentLevel = getCurrentLevel();
                 const levelAlertAdded = isLevelAlertAdded();
 
-                console.log('Help OTRS: Verificando níveis - Usuário:', userLevel, 'Atual:', currentLevel);
+                console.log('Help OTRS: === DEBUG DETALHADO DE NÍVEIS ===');
+                console.log('Help OTRS: Usuário (raw):', userLevel);
+                console.log('Help OTRS: Atual (raw):', currentLevel);
+                console.log('Help OTRS: Comparação:', configManager.compareUserLevels(userLevel, currentLevel));
 
                 if (!configManager.compareUserLevels(userLevel, currentLevel)) {
                     console.log('Help OTRS: Níveis diferentes detectados - adicionando alerta');
@@ -522,6 +868,9 @@ function setMutationObserverToServiceDiv(level) {
                         removeLevelAlertAdded();
                     } catch {}
                 }
+
+                // Validar se é fila de Técnico Local e tipo de atendimento
+                validateServiceTypeForQueue();
             }
         }
     };
@@ -557,6 +906,42 @@ function setMutationObserverToServiceClassification() {
 
     const observer = new MutationObserver(callback);
     observer.observe(serviceDiv, config);
+}
+
+function setMutationObserverToServiceType() {
+    if (!configManager.isFeatureEnabled('typeOfServiceAlerts')) return;
+
+    // Observar mudanças no campo de tipo de atendimento
+    const serviceTypeDiv = document.querySelector("#DynamicField_PRITipoAtendimento_Search")?.parentElement;
+    if (serviceTypeDiv) {
+        const config = {
+            childList: true,
+            subtree: true,
+        };
+
+        const callback = function (mutationList, _) {
+            for (let mutation of mutationList) {
+                if (mutation.type === "childList") {
+                    console.log('Help OTRS: Mudança detectada no tipo de atendimento');
+                    validateServiceTypeForQueue();
+                }
+            }
+        };
+
+        const observer = new MutationObserver(callback);
+        observer.observe(serviceTypeDiv, config);
+        console.log('Help OTRS: Observer do tipo de atendimento configurado');
+    }
+
+    // Observar mudanças no select oculto do tipo de atendimento
+    const serviceTypeSelect = document.querySelector("#DynamicField_PRITipoAtendimento");
+    if (serviceTypeSelect) {
+        serviceTypeSelect.addEventListener('change', function() {
+            console.log('Help OTRS: Select de tipo de atendimento alterado');
+            validateServiceTypeForQueue();
+        });
+        console.log('Help OTRS: Event listener do select de tipo de atendimento configurado');
+    }
 }
 
 function delay(ms) {
@@ -687,6 +1072,14 @@ async function init() {
         } else {
             console.log('Help OTRS: Nível de usuário não encontrado');
         }
+        
+        // Configurar observador para tipo de atendimento
+        setMutationObserverToServiceType();
+        
+        // Fazer validação inicial
+        setTimeout(() => {
+            validateServiceTypeForQueue();
+        }, 1000);
     }
 
     if (isTicketNotePage()) {

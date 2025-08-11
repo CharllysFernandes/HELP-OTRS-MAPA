@@ -9,9 +9,18 @@
 <body>
     <div class="container">
         <header>
-            <img src="logo.png" alt="Logo" class="logo">
-            <h1>Configurações Help OTRS</h1>
-            <p class="subtitle">Configure os sistemas OTRS e funcionalidades</p>
+            <div class="header-content">
+                <div class="header-info">
+                    <img src="logo.png" alt="Logo" class="logo">
+                    <div class="header-text">
+                        <h1>Configurações Help OTRS</h1>
+                        <p class="subtitle">Configure os sistemas OTRS e funcionalidades</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button type="button" id="saveBtn" class="btn-primary btn-save-header">Salvar Configurações</button>
+                </div>
+            </div>
         </header>
 
         <main>
@@ -124,7 +133,6 @@
 
         <footer>
             <div class="actions">
-                <button type="button" id="saveBtn" class="btn-primary">Salvar Configurações</button>
                 <button type="button" id="resetBtn" class="btn-secondary">Restaurar Padrões</button>
             </div>
             <div class="status" id="status"></div>
@@ -136,7 +144,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Editar Sistema OTRS</h3>
-                <button type="button" class="modal-close" onclick="closeEditModal()">&times;</button>
+                <button type="button" class="modal-close" id="closeModalBtn">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -152,16 +160,12 @@
                 <div class="form-group">
                     <label for="editUserProfile">Perfil/Nível do Usuário:</label>
                     <select id="editUserProfile" class="form-select">
-                        <option value="">Selecione o perfil...</option>
-                        <option value="CSC">CSC</option>
-                        <option value="Nível 1">Nível 1</option>
-                        <option value="Nível 2">Nível 2</option>
-                        <option value="Nível 3">Nível 3</option>
+                        <!-- Opções serão carregadas dinamicamente pelo JavaScript -->
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancelar</button>
+                <button type="button" class="btn-secondary" id="cancelEditBtn">Cancelar</button>
                 <button type="button" class="btn-primary" id="saveEditBtn">Salvar Alterações</button>
             </div>
         </div>
