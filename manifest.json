@@ -6,7 +6,7 @@
     "version_name": "2.2.0 - Reaproveitamento de Dados do Formulário",
     "author": "João Felipe Lima e Charllys Fernandes",
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "src/background/background.js"
     },
     "content_scripts": [
         {
@@ -17,7 +17,13 @@
                 "http://*.agro.gov.br/otrs/*"
             ],
             "js": [
-                "script.js"
+                "src/core/ConfigManager.js",
+                "src/core/DebugHelper.js",
+                "src/core/AlertSystem.js",
+                "src/core/FormDataReuser.js",
+                "src/modules/QueueValidator.js",
+                "src/modules/ServiceTypeValidator.js",
+                "src/main.js"
             ],
             "run_at": "document_end"
         }
@@ -36,17 +42,17 @@
     "action": {
         "default_title": "Help OTRS - MAPA | Clique para abrir as configurações",
         "default_icon": {
-            "16": "logo.png",
-            "32": "logo.png",
-            "48": "logo.png",
-            "128": "logo.png"
+            "16": "src/ui/logo.png",
+            "32": "src/ui/logo.png",
+            "48": "src/ui/logo.png",
+            "128": "src/ui/logo.png"
         }
     },
-    "options_page": "options.html",
+    "options_page": "src/options/options.html",
     "icons": {
-        "16": "logo.png",
-        "32": "logo.png",
-        "48": "logo.png",
-        "128": "logo.png"
+        "16": "src/ui/logo.png",
+        "32": "src/ui/logo.png",
+        "48": "src/ui/logo.png",
+        "128": "src/ui/logo.png"
     }
 }

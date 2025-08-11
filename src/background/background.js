@@ -13,7 +13,8 @@ chrome.runtime.onInstalled.addListener(function() {
                     alertsEnabled: true,
                     typeOfServiceAlerts: true,
                     serviceClassificationAlerts: true,
-                    queueValidation: true
+                    queueValidation: true,
+                    formDataReuser: true
                 },
                 advanced: {
                     delayTime: 500
@@ -53,26 +54,20 @@ chrome.runtime.onInstalled.addListener(function() {
     });
 });
 
-// Listener para mensagens dos content scripts
+// Listener unificado para mensagens dos content scripts
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    console.log('Background: Mensagem recebida:', request.type);
+    
+    // Configurações
     if (request.type === 'GET_CONFIG') {
         chrome.storage.sync.get(['helpOtrsConfig'], function(result) {
+            console.log('Background: Enviando configuração');
             sendResponse(result.helpOtrsConfig);
         });
         return true; // Indica que a resposta será assíncrona
     }
-});
-
-// Abrir página de opções quando o ícone da extensão for clicado
-chrome.action.onClicked.addListener(function(tab) {
-    chrome.runtime.openOptionsPage();
-});
-
-// Background script para lidar com requisições cross-origin
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('Background: Mensagem recebida:', request);
     
+    // Fetch de perfis (requisições cross-origin)
     if (request.type === 'FETCH_PROFILES') {
         fetchProfiles(request.url, request.baseUrl)
             .then(response => {
@@ -83,10 +78,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 console.error('Background: Erro:', error);
                 sendResponse({ success: false, error: error.message });
             });
-        
-        // Retorna true para indicar resposta assíncrona
-        return true;
+        return true; // Retorna true para indicar resposta assíncrona
     }
+    
+    // Se chegou até aqui, não reconheceu o tipo de mensagem
+    console.log('Background: Tipo de mensagem não reconhecido:', request.type);
+    return false;
+});
+
+// Abrir página de opções quando o ícone da extensão for clicado
+chrome.action.onClicked.addListener(function(tab) {
+    chrome.runtime.openOptionsPage();
 });
 
 async function fetchProfiles(url, baseUrl) {
