@@ -2,7 +2,8 @@
     "manifest_version": 3,
     "name": "Help Otrs - MAPA",
     "description": "Ferramenta de alerta configurável para sistemas OTRS (MAPA, SFB, MT, etc).",
-    "version": "2.0.0",
+    "version": "2.1.0",
+    "version_name": "2.1.0 - Validação de Filas e Normalização",
     "author": "João Felipe Lima e Charllys Fernandes",
     "background": {
         "service_worker": "background.js"
@@ -33,7 +34,7 @@
         "http://*.agro.gov.br/otrs/*"
     ],
     "action": {
-        "default_title": "Help Otrs - Configurações",
+        "default_title": "Help OTRS - MAPA | Clique para abrir as configurações",
         "default_icon": {
             "16": "logo.png",
             "32": "logo.png",

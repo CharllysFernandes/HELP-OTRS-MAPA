@@ -431,6 +431,19 @@ window.helpOtrsDebug = {
         console.log('🔄 Forçando validação completa de tipo de atendimento...');
         validateServiceTypeForQueue();
         return helpOtrsDebug.testAllServiceTypeValidation();
+    },
+    getVersion: () => {
+        const manifest = chrome.runtime.getManifest();
+        console.log(`📋 Help OTRS - MAPA v${manifest.version}`);
+        console.log(`📅 Build: ${manifest.version_name || 'N/A'}`);
+        console.log(`🏷️  Manifest: v${manifest.manifest_version}`);
+        console.log(`👥 Autores: ${manifest.author || 'N/A'}`);
+        return {
+            version: manifest.version,
+            version_name: manifest.version_name,
+            manifest_version: manifest.manifest_version,
+            author: manifest.author
+        };
     }
 };
 
@@ -1135,7 +1148,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 });
 
 window.addEventListener("load", async function () {
+    // Obter informações da extensão
+    const manifest = chrome.runtime.getManifest();
+    
     console.log('=== HELP OTRS DEBUG START ===');
+    console.log(`📦 Help OTRS - MAPA v${manifest.version} (${manifest.version_name || 'Build padrão'})`);
+    console.log(`👥 Desenvolvido por: ${manifest.author}`);
+    console.log(`📅 Manifest Version: ${manifest.manifest_version}`);
     console.log('Help OTRS: Window load event disparado');
     console.log('Help OTRS: URL:', window.location.href);
     console.log('Help OTRS: Hostname:', window.location.hostname);
@@ -1151,6 +1170,6 @@ window.addEventListener("load", async function () {
 
     console.log('Help OTRS: Chamando init()');
     const result = await init();
-    console.log('=== HELP OTRS DEBUG END ===');
+    console.log(`=== HELP OTRS DEBUG END v${manifest.version} ===`);
     return result;
 });

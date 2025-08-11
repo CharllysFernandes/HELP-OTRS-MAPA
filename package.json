@@ -1,0 +1,56 @@
+{
+    "name": "help-otrs-mapa",
+    "version": "2.1.0",
+    "description": "Extensão Help OTRS para sistemas MAPA - Ferramenta de alerta configurável",
+    "main": "background.js",
+    "scripts": {
+        "version:patch": "node version-bump.js patch",
+        "version:minor": "node version-bump.js minor",
+        "version:major": "node version-bump.js major",
+        "build": "node build.js patch",
+        "build:minor": "node build.js minor",
+        "build:major": "node build.js major",
+        "package": "node package.js",
+        "test": "echo \"Testes implementados via browser console - use helpOtrsDebug.testAllServiceTypeValidation()\"",
+        "clean": "del /Q help-otrs-v*.zip 2>NUL || rm -f help-otrs-v*.zip 2>/dev/null || true"
+    },
+    "keywords": [
+        "chrome-extension",
+        "otrs",
+        "mapa",
+        "sfb",
+        "alerts",
+        "helpdesk",
+        "tickets"
+    ],
+    "authors": [
+        "João Felipe Lima",
+        "Charllys Fernandes"
+    ],
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/CharllysFernandes/HELP-OTRS-MAPA.git"
+    },
+    "bugs": {
+        "url": "https://github.com/CharllysFernandes/HELP-OTRS-MAPA/issues"
+    },
+    "homepage": "https://github.com/CharllysFernandes/HELP-OTRS-MAPA#readme",
+    "devDependencies": {},
+    "engines": {
+        "node": ">=14.0.0"
+    },
+    "extensionInfo": {
+        "manifestVersion": 3,
+        "permissions": [
+            "activeTab",
+            "scripting",
+            "storage"
+        ],
+        "supportedBrowsers": [
+            "Chrome >= 88",
+            "Edge >= 88",
+            "Opera >= 74"
+        ]
+    }
+}
