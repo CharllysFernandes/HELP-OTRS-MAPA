@@ -11,7 +11,9 @@
         {
             "matches": [
                 "http://*.com.br/otrs/*",
-                "https://*.com.br/otrs/*"
+                "https://*.com.br/otrs/*",
+                "https://*.agro.gov.br/otrs/*",
+                "http://*.agro.gov.br/otrs/*"
             ],
             "js": [
                 "script.js"
@@ -26,7 +28,9 @@
     ],
     "host_permissions": [
         "http://*.com.br/otrs/*",
-        "https://*.com.br/otrs/*"
+        "https://*.com.br/otrs/*",
+        "https://*.agro.gov.br/otrs/*",
+        "http://*.agro.gov.br/otrs/*"
     ],
     "action": {
         "default_title": "Help Otrs - Configurações",

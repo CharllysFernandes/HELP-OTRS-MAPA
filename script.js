@@ -11,12 +11,19 @@ class ConfigManager {
         
         const normalizedLevel = level.toLowerCase().trim();
         
-        // Mapeamento de sinônimos
+        // Mapeamento de sinônimos (todas as chaves devem estar em minúsculas)
         const levelMappings = {
-            'Técnico Remoto': 'Nível 1',
-            'Técnico Remotox': 'Nível 1',
+            // Nível 1 - Variações
+            'nível 1 - serviços aos usuários de tic': 'Nível 1',
+            'nível1 - serviços aos usuários de tic': 'Nível 1',
+            'nivel 1 - serviços aos usuários de tic': 'Nível 1',
+            'nivel1 - serviços aos usuários de tic': 'Nível 1',
+            'nivel 1 - serviços aos usuarios de tic': 'Nível 1',
+            'nivel1 - serviços aos usuarios de tic': 'Nível 1',
             'técnico remoto': 'Nível 1',
+            'técnico remotox': 'Nível 1',
             'tecnico remoto': 'Nível 1',
+            'tecnico remotox': 'Nível 1',
             'remoto': 'Nível 1',
             'nível 1': 'Nível 1',
             'nivel 1': 'Nível 1',
@@ -24,15 +31,20 @@ class ConfigManager {
             'l1': 'Nível 1',
             'level 1': 'Nível 1',
 
-            'Técnico Presencial': 'Nível 2',
-            'Técnico Presencialx': 'Nível 2',
-            'Técnico Local': 'Nível 2',
-            'Tecnico Local': 'Nível 2',
+            // Nível 2 - Variações
+            'nível 2 - serviços aos usuários de tic': 'Nível 2',
+            'nível2 - serviços aos usuários de tic': 'Nível 2',
+            'nivel 2 - serviços aos usuários de tic': 'Nível 2',
+            'nivel2 - serviços aos usuários de tic': 'Nível 2',
+            'nivel 2 - serviços aos usuarios de tic': 'Nível 2',
+            'nivel2 - serviços aos usuarios de tic': 'Nível 2',
+            'técnico presencial': 'Nível 2',
+            'técnico presencialx': 'Nível 2',
             'técnico local': 'Nível 2',
+            'tecnico presencial': 'Nível 2',
+            'tecnico presencialx': 'Nível 2',
             'tecnico local': 'Nível 2',
             'local': 'Nível 2',            
-            'técnico presencial': 'Nível 2',
-            'tecnico presencial': 'Nível 2',
             'presencial': 'Nível 2',
             'nível 2': 'Nível 2',
             'nivel 2': 'Nível 2',
@@ -40,6 +52,13 @@ class ConfigManager {
             'l2': 'Nível 2',
             'level 2': 'Nível 2',
             
+            // Nível 3 - Variações (incluindo possível variação futura)
+            'nível 3 - serviços aos usuários de tic': 'Nível 3',
+            'nível3 - serviços aos usuários de tic': 'Nível 3',
+            'nivel 3 - serviços aos usuários de tic': 'Nível 3',
+            'nivel3 - serviços aos usuários de tic': 'Nível 3',
+            'nivel 3 - serviços aos usuarios de tic': 'Nível 3',
+            'nivel3 - serviços aos usuarios de tic': 'Nível 3',
             'nível 3': 'Nível 3',
             'nivel 3': 'Nível 3',
             'n3': 'Nível 3',
