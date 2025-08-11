@@ -40,26 +40,30 @@
                             <li>Digite o nome e URL do sistema abaixo</li>
                             <li>Clique em "Carregar Perfis" para buscar automaticamente</li>
                             <li>Selecione seu perfil/nível e adicione o sistema</li>
+                            <li>Salve as configurações para usar a extensão</li>
                         </ol>
                     </div>
                     
                     <div class="form-group">
-                        <label for="otrsName">Nome do Sistema:</label>
-                        <input type="text" id="otrsName" placeholder="Ex: MAPA, SFB, MT">
+                        <label for="otrsName">Nome do Sistema: <span class="required">*</span></label>
+                        <input type="text" id="otrsName" placeholder="Ex: MAPA, SFB, MT" required>
+                        <div class="error-message" id="otrsNameError"></div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="otrsUrl">URL Base do OTRS:</label>
-                        <input type="url" id="otrsUrl" placeholder="https://exemplo.agro.gov.br/otrs/">
+                        <label for="otrsUrl">URL Base do OTRS: <span class="required">*</span></label>
+                        <input type="url" id="otrsUrl" placeholder="https://exemplo.agro.gov.br/otrs/" required>
                         <small>⚠️ <strong>Importante:</strong> Certifique-se de estar logado no sistema OTRS antes de carregar os perfis</small>
+                        <div class="error-message" id="otrsUrlError"></div>
                     </div>
                     
                     <div class="form-group" id="profileGroup" style="display: none;">
-                        <label for="userProfile">Selecione seu Perfil/Nível:</label>
-                        <select id="userProfile" class="form-select">
+                        <label for="userProfile">Selecione seu Perfil/Nível: <span class="required">*</span></label>
+                        <select id="userProfile" class="form-select" required>
                             <option value="">Carregando perfis...</option>
                         </select>
                         <small>Perfil detectado automaticamente do sistema OTRS</small>
+                        <div class="error-message" id="userProfileError"></div>
                     </div>
                     
                     <div class="form-actions">
@@ -148,20 +152,23 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="editOtrsName">Nome do Sistema:</label>
-                    <input type="text" id="editOtrsName" placeholder="Ex: MAPA, SFB, MT">
+                    <label for="editOtrsName">Nome do Sistema: <span class="required">*</span></label>
+                    <input type="text" id="editOtrsName" placeholder="Ex: MAPA, SFB, MT" required>
+                    <div class="error-message" id="editOtrsNameError"></div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="editOtrsUrl">URL Base do OTRS:</label>
-                    <input type="url" id="editOtrsUrl" placeholder="https://exemplo.agro.gov.br/otrs/">
+                    <label for="editOtrsUrl">URL Base do OTRS: <span class="required">*</span></label>
+                    <input type="url" id="editOtrsUrl" placeholder="https://exemplo.agro.gov.br/otrs/" required>
+                    <div class="error-message" id="editOtrsUrlError"></div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="editUserProfile">Perfil/Nível do Usuário:</label>
-                    <select id="editUserProfile" class="form-select">
+                    <label for="editUserProfile">Perfil/Nível do Usuário: <span class="required">*</span></label>
+                    <select id="editUserProfile" class="form-select" required>
                         <!-- Opções serão carregadas dinamicamente pelo JavaScript -->
                     </select>
+                    <div class="error-message" id="editUserProfileError"></div>
                 </div>
             </div>
             <div class="modal-footer">

@@ -219,12 +219,70 @@ function setupEventListeners() {
         if (url && isValidUrl(url)) {
             loadBtn.disabled = false;
             manualBtn.disabled = false;
+            clearFieldError('otrsUrl');
         } else {
             loadBtn.disabled = true;
             manualBtn.disabled = true;
             profileGroup.style.display = 'none';
             document.getElementById('addOtrsBtn').disabled = true;
         }
+    });
+
+    // Validação em tempo real para nome do sistema
+    document.getElementById('otrsName').addEventListener('input', function() {
+        const name = this.value.trim();
+        if (name.length > 0) {
+            clearFieldError('otrsName');
+            
+            // Verificar se nome já existe
+            if (currentConfig.otrs_systems.some(system => 
+                system.name.toLowerCase() === name.toLowerCase())) {
+                showFieldError('otrsName', '⚠️ Já existe um sistema com este nome');
+            } else if (name.length < 2) {
+                showFieldError('otrsName', '📝 Nome deve ter pelo menos 2 caracteres');
+            } else if (name.length > 50) {
+                showFieldError('otrsName', '📝 Nome deve ter no máximo 50 caracteres');
+            } else {
+                showFieldSuccess('otrsName');
+            }
+        } else {
+            clearFieldError('otrsName');
+        }
+        
+        validateAddButton();
+    });
+
+    // Validação em tempo real para URL
+    document.getElementById('otrsUrl').addEventListener('blur', function() {
+        const url = this.value.trim();
+        if (url.length > 0) {
+            if (!isValidUrl(url)) {
+                showFieldError('otrsUrl', '🌐 URL inválida. Use formato: https://exemplo.com/otrs/');
+            } else {
+                // Verificar se URL já existe
+                const normalizedUrl = url.endsWith('/') ? url : url + '/';
+                if (currentConfig.otrs_systems.some(system => 
+                    system.baseUrl.toLowerCase() === normalizedUrl.toLowerCase())) {
+                    showFieldError('otrsUrl', '⚠️ Já existe um sistema com esta URL');
+                } else {
+                    showFieldSuccess('otrsUrl');
+                }
+            }
+        }
+        
+        validateAddButton();
+    });
+
+    // Validação para seleção de perfil
+    document.getElementById('userProfile').addEventListener('change', function() {
+        const profile = this.value;
+        if (profile) {
+            showFieldSuccess('userProfile');
+        } else {
+            clearFieldError('userProfile');
+        }
+        
+        validateAddButton();
     });
     
     // Fechar modal quando clicar fora dele
@@ -240,6 +298,50 @@ function setupEventListeners() {
             closeEditModal();
         }
     });
+}
+
+// Função para validar se o botão "Adicionar Sistema" deve estar habilitado
+function validateAddButton() {
+    const name = document.getElementById('otrsName').value.trim();
+    const url = document.getElementById('otrsUrl').value.trim();
+    const profile = document.getElementById('userProfile').value;
+    const addBtn = document.getElementById('addOtrsBtn');
+    
+    const isNameValid = name.length >= 2 && name.length <= 50 && 
+        !currentConfig.otrs_systems.some(system => 
+            system.name.toLowerCase() === name.toLowerCase());
+    
+    const isUrlValid = isValidUrl(url) && 
+        !currentConfig.otrs_systems.some(system => {
+            const normalizedUrl = url.endsWith('/') ? url : url + '/';
+            return system.baseUrl.toLowerCase() === normalizedUrl.toLowerCase();
+        });
+    
+    const isProfileValid = profile && profile.length > 0;
+    
+    if (isNameValid && isUrlValid && isProfileValid) {
+        addBtn.disabled = false;
+        addBtn.textContent = 'Adicionar Sistema';
+        addBtn.style.opacity = '1';
+    } else {
+        addBtn.disabled = true;
+        addBtn.style.opacity = '0.5';
+        
+        // Dar dicas sobre o que está faltando
+        if (!name) {
+            addBtn.textContent = 'Digite o nome do sistema';
+        } else if (!isNameValid) {
+            addBtn.textContent = 'Nome inválido';
+        } else if (!url) {
+            addBtn.textContent = 'Digite a URL do sistema';
+        } else if (!isUrlValid) {
+            addBtn.textContent = 'URL inválida';
+        } else if (!profile) {
+            addBtn.textContent = 'Selecione o perfil';
+        } else {
+            addBtn.textContent = 'Preencha todos os campos';
+        }
+    }
 }
 
 // Carregar perfis de usuário do sistema OTRS
@@ -443,6 +545,63 @@ function populateProfileSelect(profiles) {
 }
 
 // Validar URL
+// Funções utilitárias de validação
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorDiv = document.getElementById(fieldId + 'Error');
+    
+    if (field) {
+        field.classList.remove('invalid', 'valid');
+    }
+    if (errorDiv) {
+        errorDiv.classList.remove('show');
+        errorDiv.textContent = '';
+    }
+}
+
+function showFieldError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    const errorDiv = document.getElementById(fieldId + 'Error');
+    
+    if (field) {
+        field.classList.remove('valid');
+        field.classList.add('invalid');
+        field.focus();
+    }
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.classList.add('show');
+    }
+}
+
+function showFieldSuccess(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorDiv = document.getElementById(fieldId + 'Error');
+    
+    if (field) {
+        field.classList.remove('invalid');
+        field.classList.add('valid');
+    }
+    if (errorDiv) {
+        errorDiv.classList.remove('show');
+        errorDiv.textContent = '';
+    }
+}
+
+function validateField(fieldId, value, validationRules) {
+    clearFieldError(fieldId);
+    
+    for (const rule of validationRules) {
+        if (!rule.test(value)) {
+            showFieldError(fieldId, rule.message);
+            return false;
+        }
+    }
+    
+    showFieldSuccess(fieldId);
+    return true;
+}
+
 function isValidUrl(string) {
     try {
         const url = new URL(string);
@@ -474,52 +633,131 @@ async function addOtrsSystem() {
     const baseUrl = document.getElementById('otrsUrl').value.trim();
     const selectedProfile = document.getElementById('userProfile').value;
 
-    // Validações detalhadas com mensagens específicas
-    if (!name) {
-        showStatus('Por favor, informe o nome do sistema OTRS', 'error');
-        return;
-    }
+    console.log('Tentando adicionar sistema:', { name, baseUrl, selectedProfile });
     
-    if (!baseUrl) {
-        showStatus('Por favor, informe a URL do sistema OTRS', 'error');
-        return;
-    }
-    
-    if (!selectedProfile) {
-        showStatus('Por favor, selecione o perfil do usuário. Use "Carregar Perfis" ou "Inserir Manualmente"', 'error');
-        return;
+    // Limpar erros anteriores
+    clearFieldError('otrsName');
+    clearFieldError('otrsUrl');
+    clearFieldError('userProfile');
+
+    let hasErrors = false;
+
+    // Validar nome do sistema
+    const nameValidation = [
+        {
+            test: (value) => value.length > 0,
+            message: '📝 Nome do sistema é obrigatório'
+        },
+        {
+            test: (value) => value.length >= 2,
+            message: '📝 Nome deve ter pelo menos 2 caracteres'
+        },
+        {
+            test: (value) => value.length <= 50,
+            message: '📝 Nome deve ter no máximo 50 caracteres'
+        },
+        {
+            test: (value) => {
+                // Verificar se já existe um sistema com esse nome
+                return !currentConfig.otrs_systems.some(system => 
+                    system.name.toLowerCase() === value.toLowerCase()
+                );
+            },
+            message: '⚠️ Já existe um sistema com este nome'
+        }
+    ];
+
+    if (!validateField('otrsName', name, nameValidation)) {
+        hasErrors = true;
     }
 
     // Validar URL
-    if (!isValidUrl(baseUrl)) {
-        showStatus('URL inválida. Verifique se a URL está correta', 'error');
+    const urlValidation = [
+        {
+            test: (value) => value.length > 0,
+            message: '🌐 URL do sistema é obrigatória'
+        },
+        {
+            test: (value) => isValidUrl(value),
+            message: '🌐 URL inválida. Use formato: https://exemplo.com/otrs/'
+        },
+        {
+            test: (value) => {
+                // Verificar se já existe um sistema com essa URL
+                const normalizedUrl = value.endsWith('/') ? value : value + '/';
+                return !currentConfig.otrs_systems.some(system => 
+                    system.baseUrl.toLowerCase() === normalizedUrl.toLowerCase()
+                );
+            },
+            message: '⚠️ Já existe um sistema com esta URL'
+        }
+    ];
+
+    if (!validateField('otrsUrl', baseUrl, urlValidation)) {
+        hasErrors = true;
+    }
+
+    // Validar perfil (se o campo estiver visível)
+    const profileGroup = document.getElementById('profileGroup');
+    if (profileGroup.style.display !== 'none') {
+        const profileValidation = [
+            {
+                test: (value) => value.length > 0,
+                message: '👤 Seleção de perfil é obrigatória'
+            }
+        ];
+
+        if (!validateField('userProfile', selectedProfile, profileValidation)) {
+            hasErrors = true;
+        }
+    } else if (!selectedProfile) {
+        showFieldError('userProfile', '👤 Use "Carregar Perfis" ou "Inserir Manualmente" para definir o perfil');
+        hasErrors = true;
+    }
+
+    // Se há erros, não continuar
+    if (hasErrors) {
+        showStatus('❌ Corrija os erros indicados nos campos acima', 'error');
         return;
     }
 
-    const normalizedUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-    
-    const newSystem = {
-        id: generateId(),
-        name: name,
-        baseUrl: normalizedUrl,
-        userProfile: selectedProfile,
-        enabled: true
-    };
+    try {
+        const normalizedUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+        
+        const newSystem = {
+            id: generateId(),
+            name: name,
+            baseUrl: normalizedUrl,
+            userProfile: selectedProfile,
+            enabled: true
+        };
 
-    currentConfig.otrs_systems.push(newSystem);
-    
-    // Limpar campos
-    document.getElementById('otrsName').value = '';
-    document.getElementById('otrsUrl').value = '';
-    document.getElementById('userProfile').value = '';
-    document.getElementById('profileGroup').style.display = 'none';
-    document.getElementById('addOtrsBtn').disabled = true;
-    document.getElementById('loadProfilesBtn').disabled = true;
-    
-    await renderOtrsSystems();
-    
-    // Usar alerta personalizado para adicionar sistema
-    showSaveAlert(`✅ Sistema "${name}" adicionado com sucesso!`);
+        currentConfig.otrs_systems.push(newSystem);
+        
+        // Limpar campos e remover estilos de validação
+        document.getElementById('otrsName').value = '';
+        document.getElementById('otrsUrl').value = '';
+        document.getElementById('userProfile').value = '';
+        document.getElementById('profileGroup').style.display = 'none';
+        document.getElementById('addOtrsBtn').disabled = true;
+        document.getElementById('loadProfilesBtn').disabled = false;
+        
+        // Limpar todos os estados de validação
+        clearFieldError('otrsName');
+        clearFieldError('otrsUrl');
+        clearFieldError('userProfile');
+        
+        await renderOtrsSystems();
+        
+        // Usar alerta personalizado para adicionar sistema
+        showSaveAlert(`✅ Sistema "${name}" adicionado com sucesso! Não esqueça de salvar as configurações.`);
+        
+        console.log('Sistema adicionado com sucesso:', newSystem);
+        
+    } catch (error) {
+        console.error('Erro ao adicionar sistema:', error);
+        showStatus('❌ Erro interno ao adicionar sistema. Tente novamente.', 'error');
+    }
 }
 
 // Alternar sistema OTRS
@@ -587,38 +825,118 @@ function editOtrsSystem(id) {
 }
 
 // Salvar sistema editado
-function saveEditedSystem() {
+async function saveEditedSystem() {
     if (!editingSystemId) return;
     
     const name = document.getElementById('editOtrsName').value.trim();
     const baseUrl = document.getElementById('editOtrsUrl').value.trim();
     const userProfile = document.getElementById('editUserProfile').value;
 
-    // Validações
-    if (!name || !baseUrl || !userProfile) {
-        showStatus('Todos os campos são obrigatórios', 'error');
+    console.log('Tentando salvar edição:', { name, baseUrl, userProfile });
+    
+    // Limpar erros anteriores
+    clearFieldError('editOtrsName');
+    clearFieldError('editOtrsUrl');
+    clearFieldError('editUserProfile');
+
+    let hasErrors = false;
+
+    // Validar nome do sistema
+    const nameValidation = [
+        {
+            test: (value) => value.length > 0,
+            message: '📝 Nome do sistema é obrigatório'
+        },
+        {
+            test: (value) => value.length >= 2,
+            message: '📝 Nome deve ter pelo menos 2 caracteres'
+        },
+        {
+            test: (value) => value.length <= 50,
+            message: '📝 Nome deve ter no máximo 50 caracteres'
+        },
+        {
+            test: (value) => {
+                // Verificar se já existe um sistema com esse nome (exceto o atual)
+                return !currentConfig.otrs_systems.some(system => 
+                    system.id !== editingSystemId && system.name.toLowerCase() === value.toLowerCase()
+                );
+            },
+            message: '⚠️ Já existe um sistema com este nome'
+        }
+    ];
+
+    if (!validateField('editOtrsName', name, nameValidation)) {
+        hasErrors = true;
+    }
+
+    // Validar URL
+    const urlValidation = [
+        {
+            test: (value) => value.length > 0,
+            message: '🌐 URL do sistema é obrigatória'
+        },
+        {
+            test: (value) => isValidUrl(value),
+            message: '🌐 URL inválida. Use formato: https://exemplo.com/otrs/'
+        },
+        {
+            test: (value) => {
+                // Verificar se já existe um sistema com essa URL (exceto o atual)
+                const normalizedUrl = value.endsWith('/') ? value : value + '/';
+                return !currentConfig.otrs_systems.some(system => 
+                    system.id !== editingSystemId && system.baseUrl.toLowerCase() === normalizedUrl.toLowerCase()
+                );
+            },
+            message: '⚠️ Já existe um sistema com esta URL'
+        }
+    ];
+
+    if (!validateField('editOtrsUrl', baseUrl, urlValidation)) {
+        hasErrors = true;
+    }
+
+    // Validar perfil
+    const profileValidation = [
+        {
+            test: (value) => value.length > 0,
+            message: '👤 Seleção de perfil é obrigatória'
+        }
+    ];
+
+    if (!validateField('editUserProfile', userProfile, profileValidation)) {
+        hasErrors = true;
+    }
+
+    // Se há erros, não continuar
+    if (hasErrors) {
+        showStatus('❌ Corrija os erros indicados nos campos acima', 'error');
         return;
     }
 
-    if (!isValidUrl(baseUrl)) {
-        showStatus('URL inválida', 'error');
-        return;
-    }
-
-    // Encontrar e atualizar o sistema
-    const system = currentConfig.otrs_systems.find(s => s.id === editingSystemId);
-    if (system) {
-        system.name = name;
-        system.baseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-        system.userProfile = userProfile;
+    try {
+        // Encontrar e atualizar o sistema
+        const system = currentConfig.otrs_systems.find(s => s.id === editingSystemId);
+        if (system) {
+            const oldName = system.name;
+            system.name = name;
+            system.baseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+            system.userProfile = userProfile;
+            
+            await renderOtrsSystems();
+            closeEditModal();
+            
+            // Mostrar alerta personalizado de sucesso
+            showSaveAlert(`✅ Sistema "${name}" atualizado com sucesso!`);
+            
+            console.log('Sistema editado com sucesso:', system);
+        } else {
+            showStatus('❌ Sistema não encontrado para edição', 'error');
+        }
         
-        renderOtrsSystems();
-        closeEditModal();
-        
-        // Mostrar alerta personalizado de sucesso
-        showSaveAlert(`Sistema "${name}" atualizado com sucesso!`);
-    } else {
-        showStatus('Erro ao atualizar sistema', 'error');
+    } catch (error) {
+        console.error('Erro ao salvar edição:', error);
+        showStatus('❌ Erro interno ao salvar edição. Tente novamente.', 'error');
     }
 }
 
@@ -629,10 +947,15 @@ function closeEditModal() {
     document.body.style.overflow = 'auto'; // Restaurar scroll da página
     editingSystemId = null;
     
-    // Limpar campos
+    // Limpar campos e estados de validação
     document.getElementById('editOtrsName').value = '';
     document.getElementById('editOtrsUrl').value = '';
     document.getElementById('editUserProfile').value = '';
+    
+    // Limpar estados de validação
+    clearFieldError('editOtrsName');
+    clearFieldError('editOtrsUrl');
+    clearFieldError('editUserProfile');
 }
 
 // Remover sistema OTRS
