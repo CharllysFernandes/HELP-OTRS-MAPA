@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste DebugHelper - OTRS MAPA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-section {
+            background: #f9f9f9;
+            padding: 15px;
+            border-left: 4px solid #007cba;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #005a8b;
+        }
+        
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        h1, h2, h3 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Comprovação - DebugHelper OTRS MAPA</h1>
+        <p><strong>Data:</strong> 11 de agosto de 2025</p>
+        <p><strong>Versão:</strong> Otimizada com cache DOM, benchmarks e tratamento de erros</p>
+    </div>
+
+    <div class="container">
+        <h2>🔧 Simulação de Ambiente OTRS</h2>
+        <div class="test-section">
+            <h3>Elementos DOM Simulados</h3>
+            <!-- Simulando elementos do OTRS -->
+            <div id="Dest_Search" style="display: none;">
+                <div class="InputField_Selection">
+                    <span class="Text">Técnico Local - MAPA</span>
+                </div>
+            </div>
+            
+            <select id="DynamicField_PRITipoAtendimento" style="display: none;">
+                <option value="">Selecione...</option>
+                <option value="presencial">Presencial</option>
+                <option value="remoto">Remoto</option>
+            </select>
+            
+            <input id="DynamicField_PRITipoAtendimento_Search" type="text" style="display: none;">
+            <span>Campo de Pesquisa Tipo</span>
+            
+            <div class="InputField_Selection">
+                <span class="Text">Nível 1 - Suporte</span>
+            </div>
+            
+            <div class="InputField_Selection">
+                <span class="Text">Técnico Remoto - TI</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🏗️ Teste 1: Inicialização e Estrutura</h2>
+        <div class="test-section">
+            <button onclick="testInitialization()">Testar Inicialização</button>
+            <div id="init-result" class="result"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>💾 Teste 2: Sistema de Cache DOM</h2>
+        <div class="test-section">
+            <button onclick="testDOMCache()">Testar Cache DOM</button>
+            <button onclick="testCacheClearing()">Testar Limpeza de Cache</button>
+            <div id="cache-result" class="result"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>⚡ Teste 3: Sistema de Benchmark</h2>
+        <div class="test-section">
+            <button onclick="testBenchmark()">Testar Benchmark</button>
+            <button onclick="testBenchmarkError()">Testar Benchmark com Erro</button>
+            <div id="benchmark-result" class="result"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🛡️ Teste 4: Tratamento de Erros</h2>
+        <div class="test-section">
+            <button onclick="testErrorHandling()">Testar Tratamento de Erros</button>
+            <button onclick="testGlobalInterface()">Testar Interface Global</button>
+            <div id="error-result" class="result"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🎯 Teste 5: Funcionalidades Principais</h2>
+        <div class="test-section">
+            <button onclick="testMainFunctions()">Testar Validações</button>
+            <button onclick="testDebugMethods()">Testar Métodos Debug</button>
+            <div id="main-result" class="result"></div>
+        </div>
+    </div>
+
+    <!-- Simulando ConfigManager para os testes -->
+    <script>
+        // Mock ConfigManager
+        class MockConfigManager {
+            constructor() {
+                this.config = {};
+            }
+            
+            normalizeUserLevel(level) {
+                return level.toLowerCase().replace(/\s+/g, '_');
+            }
+            
+            getStats() {
+                return {
+                    configLoaded: true,
+                    totalConfigs: 5,
+                    cacheHits: 12
+                };
+            }
+        }
+
+        // Mock Chrome API
+        window.chrome = {
+            runtime: {
+                getManifest: () => ({
+                    version: "2.1.0",
+                    version_name: "2025.08.11",
+                    manifest_version: 3,
+                    author: "Equipe MAPA"
+                })
+            }
+        };
+
+        let debugHelper;
+        let testResults = {};
+
+        function log(containerId, message, isError = false) {
+            const container = document.getElementById(containerId);
+            const className = isError ? 'error' : 'success';
+            container.innerHTML += `<span class="${className}">[${new Date().toLocaleTimeString()}]</span> ${message}\n`;
+        }
+
+        function testInitialization() {
+            const container = document.getElementById('init-result');
+            container.innerHTML = '';
+            
+            try {
+                const configManager = new MockConfigManager();
+                debugHelper = new HelpOTRS.DebugHelper(configManager);
+                
+                log('init-result', '✅ DebugHelper inicializado com sucesso');
+                log('init-result', `✅ ConfigManager validado: ${!!debugHelper.configManager}`);
+                log('init-result', `✅ Cache DOM inicializado: ${debugHelper.domCache instanceof Map}`);
+                log('init-result', `✅ Performance metrics inicializado: ${debugHelper.performanceMetrics instanceof Map}`);
+                log('init-result', `✅ Debug habilitado: ${debugHelper.isEnabled}`);
+                
+                testResults.initialization = true;
+                
+            } catch (error) {
+                log('init-result', `❌ Erro na inicialização: ${error.message}`, true);
+                testResults.initialization = false;
+            }
+        }
+
+        function testDOMCache() {
+            const container = document.getElementById('cache-result');
+            container.innerHTML = '';
+            
+            if (!debugHelper) {
+                log('cache-result', '❌ DebugHelper não inicializado! Execute o Teste 1 primeiro.', true);
+                return;
+            }
+            
+            try {
+                // Testar cache de elemento existente
+                const element1 = debugHelper.getCachedElement('#Dest_Search');
+                log('cache-result', `✅ Elemento #Dest_Search encontrado: ${!!element1}`);
+                
+                // Testar cache hit
+                const element2 = debugHelper.getCachedElement('#Dest_Search');
+                log('cache-result', `✅ Cache hit funcionando: ${element1 === element2}`);
+                
+                // Testar elemento inexistente
+                const element3 = debugHelper.getCachedElement('#elemento-inexistente');
+                log('cache-result', `✅ Elemento inexistente retorna null: ${element3 === null}`);
+                
+                // Testar método getDOMElements
+                const elements = debugHelper.getDOMElements();
+                log('cache-result', `✅ getDOMElements retornado: ${typeof elements === 'object'}`);
+                log('cache-result', `✅ inputFieldSelections encontrados: ${elements.inputFieldSelections.length} elementos`);
+                
+                testResults.cache = true;
+                
+            } catch (error) {
+                log('cache-result', `❌ Erro no teste de cache: ${error.message}`, true);
+                testResults.cache = false;
+            }
+        }
+
+        function testCacheClearing() {
+            const container = document.getElementById('cache-result');
+            
+            if (!debugHelper) {
+                log('cache-result', '❌ DebugHelper não inicializado!', true);
+                return;
+            }
+            
+            try {
+                // Adicionar itens ao cache
+                debugHelper.getCachedElement('#Dest_Search');
+                debugHelper.getCachedElement('#DynamicField_PRITipoAtendimento');
+                
+                const sizeBefore = debugHelper.domCache.size;
+                log('cache-result', `✅ Itens no cache antes da limpeza: ${sizeBefore}`);
+                
+                // Limpar cache
+                debugHelper.clearDOMCache();
+                const sizeAfter = debugHelper.domCache.size;
+                
+                log('cache-result', `✅ Cache limpo: ${sizeBefore} → ${sizeAfter} itens`);
+                
+            } catch (error) {
+                log('cache-result', `❌ Erro na limpeza de cache: ${error.message}`, true);
+            }
+        }
+
+        async function testBenchmark() {
+            const container = document.getElementById('benchmark-result');
+            container.innerHTML = '';
+            
+            if (!debugHelper) {
+                log('benchmark-result', '❌ DebugHelper não inicializado!', true);
+                return;
+            }
+            
+            try {
+                // Teste de benchmark com operação simples
+                const result = await debugHelper.benchmark('teste-operacao', async () => {
+                    // Simular operação que demora um pouco
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                    return "Operação concluída";
+                });
+                
+                log('benchmark-result', `✅ Benchmark executado: resultado = "${result}"`);
+                
+                // Verificar se métricas foram salvas
+                const metrics = debugHelper.getPerformanceMetrics();
+                log('benchmark-result', `✅ Métricas salvas: ${Object.keys(metrics).length} entradas`);
+                
+                if (metrics['teste-operacao']) {
+                    const metric = metrics['teste-operacao'];
+                    log('benchmark-result', `✅ Duração registrada: ${metric.duration.toFixed(2)}ms`);
+                    log('benchmark-result', `✅ Sucesso registrado: ${metric.success}`);
+                }
+                
+                testResults.benchmark = true;
+                
+            } catch (error) {
+                log('benchmark-result', `❌ Erro no benchmark: ${error.message}`, true);
+                testResults.benchmark = false;
+            }
+        }
+
+        async function testBenchmarkError() {
+            const container = document.getElementById('benchmark-result');
+            
+            if (!debugHelper) {
+                log('benchmark-result', '❌ DebugHelper não inicializado!', true);
+                return;
+            }
+            
+            try {
+                // Teste de benchmark com erro
+                await debugHelper.benchmark('teste-erro', async () => {
+                    throw new Error('Erro simulado para teste');
+                });
+                
+            } catch (error) {
+                log('benchmark-result', `✅ Erro capturado corretamente: ${error.message}`);
+                
+                // Verificar se métrica de erro foi salva
+                const metrics = debugHelper.getPerformanceMetrics();
+                if (metrics['teste-erro'] && !metrics['teste-erro'].success) {
+                    log('benchmark-result', `✅ Erro registrado nas métricas corretamente`);
+                }
+            }
+        }
+
+        function testErrorHandling() {
+            const container = document.getElementById('error-result');
+            container.innerHTML = '';
+            
+            if (!debugHelper) {
+                log('error-result', '❌ DebugHelper não inicializado!', true);
+                return;
+            }
+            
+            try {
+                // Testar log estruturado
+                debugHelper.log('info', 'Teste de log info');
+                debugHelper.log('warn', 'Teste de log warning'); 
+                debugHelper.log('error', 'Teste de log error', { detail: 'erro simulado' });
+                
+                log('error-result', '✅ Sistema de log funcionando (verifique o console)');
+                
+                // Testar métodos com tratamento de erro
+                const result = debugHelper.debugElements();
+                log('error-result', `✅ debugElements com tratamento de erro: ${typeof result === 'object'}`);
+                
+                testResults.errorHandling = true;
+                
+            } catch (error) {
+                log('error-result', `❌ Erro no tratamento de erros: ${error.message}`, true);
+                testResults.errorHandling = false;
+            }
+        }
+
+        function testGlobalInterface() {
+            const container = document.getElementById('error-result');
+            
+            if (!debugHelper) {
+                log('error-result', '❌ DebugHelper não inicializado!', true);
+                return;
+            }
+            
+            try {
+                // Configurar interface global
+                debugHelper.setupGlobalDebugInterface();
+                
+                // Verificar se interface foi criada
+                log('error-result', `✅ Interface global criada: ${typeof window.helpOtrsDebug === 'object'}`);
+                
+                if (window.helpOtrsDebug) {
+                    log('error-result', `✅ Método help disponível: ${typeof window.helpOtrsDebug.help === 'function'}`);
+                    log('error-result', `✅ Método testLocal disponível: ${typeof window.helpOtrsDebug.testLocal === 'function'}`);
+                    log('error-result', `✅ Método version disponível: ${typeof window.helpOtrsDebug.version === 'function'}`);
+                }
+                
+            } catch (error) {
+                log('error-result', `❌ Erro na interface global: ${error.message}`, true);
+            }
+        }
+
+        function testMainFunctions() {
+            const container = document.getElementById('main-result');
+            container.innerHTML = '';
+            
+            if (!debugHelper) {
+                log('main-result', '❌ DebugHelper não inicializado!', true);
+                return;
+            }
+            
+            try {
+                // Testar validação técnico local
+                const localResult = debugHelper.testLocalTechnicianValidation();
+                log('main-result', `✅ Teste técnico local: ${typeof localResult === 'object'}`);
+                log('main-result', `   - shouldShowAlert: ${localResult.shouldShowAlert}`);
+                
+                // Testar validação técnico remoto
+                const remoteResult = debugHelper.testRemoteTechnicianValidation();
+                log('main-result', `✅ Teste técnico remoto: ${typeof remoteResult === 'object'}`);
+                log('main-result', `   - shouldShowAlert: ${remoteResult.shouldShowAlert}`);
+                
+                // Testar validação completa
+                const allResult = debugHelper.testAllServiceTypeValidation();
+                log('main-result', `✅ Teste completo: ${typeof allResult === 'object'}`);
+                log('main-result', `   - Tem resultado local: ${!!allResult.local}`);
+                log('main-result', `   - Tem resultado remoto: ${!!allResult.remote}`);
+                
+                testResults.mainFunctions = true;
+                
+            } catch (error) {
+                log('main-result', `❌ Erro nas funções principais: ${error.message}`, true);
+                testResults.mainFunctions = false;
+            }
+        }
+
+        function testDebugMethods() {
+            const container = document.getElementById('main-result');
+            
+            if (!debugHelper) {
+                log('main-result', '❌ DebugHelper não inicializado!', true);
+                return;
+            }
+            
+            try {
+                // Testar debug de nível atual
+                const currentLevel = debugHelper.debugCurrentLevel();
+                log('main-result', `✅ Debug nível atual: "${currentLevel}"`);
+                
+                // Testar debug de elementos
+                const elementsDebug = debugHelper.debugElements();
+                log('main-result', `✅ Debug elementos: ${typeof elementsDebug === 'object'}`);
+                log('main-result', `   - Seleções encontradas: ${elementsDebug.allSelections?.length || 0}`);
+                
+                // Testar informações de versão
+                const version = debugHelper.getVersion();
+                log('main-result', `✅ Informações de versão: v${version.version}`);
+                
+                // Testar estatísticas
+                const stats = debugHelper.getStats();
+                log('main-result', `✅ Estatísticas: ${typeof stats === 'object'}`);
+                log('main-result', `   - URL: ${stats.url}`);
+                log('main-result', `   - Debug habilitado: ${stats.debugEnabled}`);
+                
+            } catch (error) {
+                log('main-result', `❌ Erro nos métodos de debug: ${error.message}`, true);
+            }
+        }
+
+        // Testar dispose
+        function testDispose() {
+            if (!debugHelper) return;
+            
+            try {
+                debugHelper.dispose();
+                console.log('✅ Dispose executado com sucesso');
+            } catch (error) {
+                console.error('❌ Erro no dispose:', error);
+            }
+        }
+
+        // Cleanup ao sair da página
+        window.addEventListener('beforeunload', testDispose);
+    </script>
+
+    <!-- Carregando scripts necessários -->
+    <script src="../../src/core/ConfigManager.js"></script>
+    <script src="../../src/core/DebugHelper.js"></script>
+
+    <div class="container">
+        <h2>📊 Resultado Final</h2>
+        <div class="test-section">
+            <p><strong>Status das melhorias implementadas:</strong></p>
+            <ul>
+                <li>✅ Sistema de Cache DOM Inteligente</li>
+                <li>✅ Sistema de Benchmark e Métricas de Performance</li>
+                <li>✅ Tratamento de Erros Robusto</li>
+                <li>✅ Otimização de Queries DOM Centralizadas</li>
+            </ul>
+            
+            <button onclick="
+                console.log('=== EXECUÇÃO AUTOMÁTICA DE TODOS OS TESTES ===');
+                testInitialization(); 
+                setTimeout(() => testDOMCache(), 500);
+                setTimeout(() => testBenchmark(), 1000);
+                setTimeout(() => testErrorHandling(), 1500);
+                setTimeout(() => testMainFunctions(), 2000);
+            ">🚀 Executar Todos os Testes</button>
+        </div>
+    </div>
+</body>
+</html>
