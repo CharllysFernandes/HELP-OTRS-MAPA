@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Service Type Validation Alert</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 900px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .Field {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        select, input {
+            width: 250px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+        .debug-section {
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border: 2px solid #007cba;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary { background: #007cba; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        
+        .debug-output {
+            background: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            padding: 5px;
+            background: #f8f9fa;
+            border-radius: 3px;
+        }
+
+        .status-label {
+            font-weight: bold;
+        }
+
+        .status-value {
+            font-family: monospace;
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+        }
+
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        .warning { color: #ffc107; }
+        .info { color: #007cba; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 Debug: Service Type Validation Alert</h1>
+        <p><strong>Problema:</strong> Alerta não aparece quando "Técnico Remoto" + "Presencial" são selecionados</p>
+
+        <div class="form-section">
+            <h3>Formulário de Teste</h3>
+            
+            <div class="Field">
+                <label for="Dest">Fila (Queue):</label>
+                <select id="Dest" name="Dest">
+                    <option value="">-- Selecione uma fila --</option>
+                    <option value="Técnico Local">Técnico Local</option>
+                    <option value="Técnico Remoto">Técnico Remoto</option>
+                    <option value="Suporte Presencial">Suporte Presencial</option>
+                    <option value="Atendimento Remoto">Atendimento Remoto</option>
+                    <option value="Helpdesk N1">Helpdesk N1</option>
+                </select>
+            </div>
+
+            <div class="Field">
+                <label for="DynamicField_PRITipoAtendimento">Tipo de Atendimento:</label>
+                <select id="DynamicField_PRITipoAtendimento" name="DynamicField_PRITipoAtendimento">
+                    <option value="">-- Selecione o tipo --</option>
+                    <option value="P">Presencial</option>
+                    <option value="R">Remoto</option>
+                </select>
+            </div>
+
+            <div class="debug-section">
+                <h4>🛠️ Controles de Debug</h4>
+                <button class="btn-primary" onclick="debugDetectServiceType()">🔍 Debug: Detectar Tipo Atual</button>
+                <button class="btn-primary" onclick="debugExpectedType()">📋 Debug: Tipo Esperado</button>
+                <button class="btn-primary" onclick="debugValidation()">⚠️ Debug: Validação Completa</button>
+                <button class="btn-warning" onclick="testProblematicScenario()">🚨 Teste: Técnico Remoto + Presencial</button>
+                <button class="btn-danger" onclick="clearDebug()">🗑️ Limpar Debug</button>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h3>📊 Status em Tempo Real</h3>
+            <div class="status-item">
+                <span class="status-label">Fila Selecionada:</span>
+                <span class="status-value" id="currentQueue">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Tipo Detectado:</span>
+                <span class="status-value" id="detectedType">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Tipo Esperado:</span>
+                <span class="status-value" id="expectedType">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Inconsistente?</span>
+                <span class="status-value" id="isInconsistent">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Função validateAndShowAlerts Chamada?</span>
+                <span class="status-value" id="validationCalled">-</span>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h3>📝 Log de Debug</h3>
+            <div id="debugOutput" class="debug-output">Aguardando operações de debug...\n</div>
+        </div>
+    </div>
+
+    <!-- Scripts Help OTRS -->
+    <script src="src/core/AlertSystem.js"></script>
+    <script>
+        let alertSystem = null;
+
+        // Mock objects para teste
+        const mockConfigManager = {
+            getUserProfile: () => 'Nível 1 (Debug)'
+        };
+
+        const mockQueueValidator = {
+            getCurrentQueue: () => {
+                const select = document.querySelector('#Dest');
+                return select ? select.value : '';
+            }
+        };
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('debugOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const typeClass = type;
+            
+            output.innerHTML += `<span class="${typeClass}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearDebug() {
+            document.getElementById('debugOutput').innerHTML = 'Log limpo...\n';
+            updateStatus();
+        }
+
+        function updateStatus() {
+            try {
+                const queue = mockQueueValidator.getCurrentQueue();
+                const detectedType = alertSystem ? alertSystem.detectCurrentServiceType() : 'N/A';
+                const expectedType = alertSystem ? alertSystem.getExpectedServiceTypeForQueue(queue) : 'N/A';
+                const isInconsistent = detectedType && expectedType ? (detectedType !== expectedType) : false;
+
+                document.getElementById('currentQueue').textContent = queue || '-';
+                document.getElementById('detectedType').textContent = detectedType || '-';
+                document.getElementById('expectedType').textContent = expectedType || '-';
+                document.getElementById('isInconsistent').textContent = isInconsistent ? 'SIM ⚠️' : 'NÃO ✅';
+                
+            } catch (error) {
+                log(`❌ Erro ao atualizar status: ${error.message}`, 'error');
+            }
+        }
+
+        function debugDetectServiceType() {
+            log('🔍 === DEBUG: detectCurrentServiceType() ===', 'info');
+            
+            if (!alertSystem) {
+                log('❌ AlertSystem não inicializado', 'error');
+                return;
+            }
+
+            try {
+                // Testar seletores individualmente
+                const serviceSelectors = [
+                    '#DynamicField_PRITipoAtendimento option:checked',
+                    '#DynamicField_PRITipoAtendimento',
+                    '.InputField_Selection .Text'
+                ];
+
+                log('📋 Testando seletores:', 'info');
+                
+                for (const selector of serviceSelectors) {
+                    try {
+                        const elements = document.querySelectorAll(selector);
+                        log(`  ${selector}: ${elements.length} elemento(s) encontrado(s)`, 'info');
+                        
+                        elements.forEach((el, index) => {
+                            log(`    [${index}] Tag: ${el.tagName}, Value: "${el.value}", Text: "${el.textContent}"`, 'info');
+                        });
+                    } catch (error) {
+                        log(`    ❌ Erro no seletor ${selector}: ${error.message}`, 'error');
+                    }
+                }
+
+                const result = alertSystem.detectCurrentServiceType();
+                log(`✅ Resultado final: "${result}"`, 'success');
+                
+            } catch (error) {
+                log(`❌ Erro na detecção: ${error.message}`, 'error');
+            }
+        }
+
+        function debugExpectedType() {
+            log('📋 === DEBUG: getExpectedServiceTypeForQueue() ===', 'info');
+            
+            if (!alertSystem) {
+                log('❌ AlertSystem não inicializado', 'error');
+                return;
+            }
+
+            const queue = mockQueueValidator.getCurrentQueue();
+            log(`🎯 Testando fila: "${queue}"`, 'info');
+            
+            if (!queue) {
+                log('⚠️ Nenhuma fila selecionada', 'warning');
+                return;
+            }
+
+            try {
+                const queueLower = queue.toLowerCase().trim();
+                log(`📝 Queue normalizada: "${queueLower}"`, 'info');
+                
+                // Testar regras
+                log('🔍 Testando regras:', 'info');
+                
+                const isPresencial = queueLower.includes('técnico local') || 
+                                   queueLower.includes('tecnico local') ||
+                                   queueLower.includes('presencial') ||
+                                   queueLower.includes('local');
+                
+                const isRemoto = queueLower.includes('remoto') || 
+                               queueLower.includes('nível 1') ||
+                               queueLower.includes('nivel 1') ||
+                               queueLower.includes('n1') ||
+                               queueLower.includes('distância') ||
+                               queueLower.includes('distancia');
+
+                log(`  Regra Presencial: ${isPresencial}`, isPresencial ? 'success' : 'info');
+                log(`  Regra Remoto: ${isRemoto}`, isRemoto ? 'success' : 'info');
+
+                const result = alertSystem.getExpectedServiceTypeForQueue(queue);
+                log(`✅ Tipo esperado: "${result}"`, 'success');
+                
+            } catch (error) {
+                log(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+
+        function debugValidation() {
+            log('⚠️ === DEBUG: validateAndShowAlerts() ===', 'info');
+            
+            if (!alertSystem) {
+                log('❌ AlertSystem não inicializado', 'error');
+                return;
+            }
+
+            try {
+                const currentQueue = mockQueueValidator.getCurrentQueue();
+                const currentServiceType = alertSystem.detectCurrentServiceType();
+                const expectedServiceType = alertSystem.getExpectedServiceTypeForQueue(currentQueue);
+
+                log(`📊 Estado atual:`, 'info');
+                log(`  Queue: "${currentQueue}"`, 'info');
+                log(`  Service Type Atual: "${currentServiceType}"`, 'info');
+                log(`  Service Type Esperado: "${expectedServiceType}"`, 'info');
+                
+                const isValidQueue = alertSystem.isValidQueue(currentQueue);
+                log(`  Queue válida: ${isValidQueue}`, isValidQueue ? 'success' : 'warning');
+
+                if (isValidQueue) {
+                    const hasInconsistency = currentServiceType && expectedServiceType && 
+                                           currentServiceType !== expectedServiceType;
+                    
+                    log(`  Há inconsistência: ${hasInconsistency}`, hasInconsistency ? 'warning' : 'success');
+                    
+                    if (hasInconsistency) {
+                        log('🚨 Deveria mostrar alerta! Executando showServiceTypeValidationAlert...', 'warning');
+                        alertSystem.showServiceTypeValidationAlert(currentQueue, currentServiceType, expectedServiceType);
+                    } else {
+                        log('✅ Não há inconsistência - removendo alerta', 'success');
+                        alertSystem.remove('service-type-validation-alert');
+                    }
+                } else {
+                    log('⚠️ Queue inválida - removendo alertas', 'warning');
+                }
+
+                document.getElementById('validationCalled').textContent = 'SIM ✅';
+                
+            } catch (error) {
+                log(`❌ Erro na validação: ${error.message}`, 'error');
+                document.getElementById('validationCalled').textContent = 'ERRO ❌';
+            }
+        }
+
+        function testProblematicScenario() {
+            log('🚨 === TESTE: Cenário Problemático ===', 'warning');
+            
+            // Configurar cenário específico
+            document.querySelector('#Dest').value = 'Técnico Remoto';
+            document.querySelector('#DynamicField_PRITipoAtendimento').value = 'P';
+            
+            log('⚙️ Configurado: Técnico Remoto + Presencial', 'info');
+            
+            updateStatus();
+            
+            setTimeout(() => {
+                debugValidation();
+            }, 100);
+        }
+
+        // Event listeners
+        function setupEventListeners() {
+            document.querySelector('#Dest')?.addEventListener('change', () => {
+                log(`📝 Fila alterada para: "${document.querySelector('#Dest').value}"`, 'info');
+                updateStatus();
+            });
+            
+            document.querySelector('#DynamicField_PRITipoAtendimento')?.addEventListener('change', () => {
+                const value = document.querySelector('#DynamicField_PRITipoAtendimento').value;
+                const text = document.querySelector('#DynamicField_PRITipoAtendimento option:checked')?.textContent || '';
+                log(`📝 Tipo alterado - Value: "${value}", Text: "${text}"`, 'info');
+                updateStatus();
+            });
+        }
+
+        // Inicialização
+        window.addEventListener('load', () => {
+            try {
+                alertSystem = new AlertSystem();
+                log('✅ AlertSystem inicializado', 'success');
+                
+                setupEventListeners();
+                updateStatus();
+                
+                log('🎯 Sistema de debug pronto! Use os botões para diagnosticar.', 'success');
+                
+            } catch (error) {
+                log(`❌ Erro na inicialização: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

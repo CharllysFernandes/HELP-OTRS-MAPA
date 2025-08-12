@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🎨 Demo: Layout dos Alertas</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .demo-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 8px 16px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .field-mockup { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            background: #f9f9f9;
+            position: relative;
+        }
+        select { padding: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Demo: Comparação de Layout dos Alertas</h1>
+        
+        <div class="demo-section">
+            <h3>Campo de Fila (Alerta Azul - Informativo)</h3>
+            <div class="field-mockup">
+                <label>Fila:</label>
+                <select id="Dest">
+                    <option value="Técnico Local">Técnico Local</option>
+                </select>
+                <div id="profile-alert-area"></div>
+            </div>
+            <button onclick="mostrarAlertaPerfil()">Mostrar Alerta de Perfil (Azul)</button>
+        </div>
+        
+        <div class="demo-section">
+            <h3>Campo de Tipo (Alerta Vermelho - Erro)</h3>
+            <div class="field-mockup">
+                <label>Tipo de Atendimento:</label>
+                <select id="DynamicField_PRITipoAtendimento">
+                    <option value="P">Presencial</option>
+                </select>
+                <div id="validation-alert-area"></div>
+            </div>
+            <button onclick="mostrarAlertaValidacao()">Mostrar Alerta de Validação (Vermelho)</button>
+        </div>
+        
+        <div class="demo-section">
+            <h3>Controles</h3>
+            <button onclick="mostrarAmbos()">Mostrar Ambos</button>
+            <button onclick="limparAlertas()">Limpar Alertas</button>
+        </div>
+    </div>
+    
+    <script src="src/core/AlertSystem.js"></script>
+    <script>
+        let alertSystem = null;
+        
+        function init() {
+            alertSystem = new AlertSystem();
+        }
+        
+        function mostrarAlertaPerfil() {
+            if (!alertSystem) init();
+            alertSystem.showUserProfileAlert('Nível 1', 'Técnico Local');
+        }
+        
+        function mostrarAlertaValidacao() {
+            if (!alertSystem) init();
+            alertSystem.showServiceTypeValidationAlert('Técnico Local', 'Remoto', 'Presencial');
+        }
+        
+        function mostrarAmbos() {
+            mostrarAlertaPerfil();
+            setTimeout(mostrarAlertaValidacao, 200);
+        }
+        
+        function limparAlertas() {
+            if (alertSystem) {
+                alertSystem.clearAll();
+            }
+        }
+        
+        // Auto-init
+        window.addEventListener('load', () => {
+            init();
+            setTimeout(() => {
+                mostrarAmbos();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

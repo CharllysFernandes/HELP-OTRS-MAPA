@@ -367,128 +367,15 @@
                     return;
                 }
 
-                this.alertSystem?.showServiceTypeQueueAlert(
-                    'Erro: Tipo de Atendimento',
-                    '⚠️ Garanta que o tipo de atendimento seja adequado ao serviço oferecido.',
-                    'error',
-                    this.alertIds.typeOfService
+                this.alertSystem?.showWarning(
+                    this.alertIds.typeOfService,
+                    'Tipo de Atendimento',
+                    '⚠️ Garanta que o tipo de atendimento seja adequado ao serviço oferecido.'
                 );
                 
                 this.log('info', 'Alerta de tipo de atendimento adicionado');
             } catch (error) {
                 this.log('error', 'Erro ao adicionar alerta de tipo de atendimento', error);
-            }
-        }
-
-        /**
-         * Adicionar alerta para técnico local
-         */
-        addLocalTechnicianAlert() {
-            try {
-                if (!this.configManager?.isFeatureEnabled('typeOfServiceAlerts')) {
-                    this.log('info', 'Alertas de técnico local desabilitados');
-                    return;
-                }
-                
-                if (this.alertSystem?.exists(this.alertIds.localTechnician)) {
-                    this.log('info', 'Alerta de técnico local já existe');
-                    return;
-                }
-
-                this.alertSystem?.showServiceTypeQueueAlert(
-                    'Erro: Incompatibilidade Fila x Tipo de Atendimento',
-                    '⚠️ Para fila de <strong>Técnico Local</strong>, o tipo de atendimento deve ser <strong>Presencial</strong>.',
-                    'error',
-                    this.alertIds.localTechnician
-                );
-                
-                this.log('info', 'Alerta de técnico local adicionado');
-            } catch (error) {
-                this.log('error', 'Erro ao adicionar alerta de técnico local', error);
-            }
-        }
-
-        /**
-         * Adicionar alerta para técnico remoto
-         */
-        addRemoteTechnicianAlert() {
-            try {
-                if (!this.configManager?.isFeatureEnabled('typeOfServiceAlerts')) {
-                    this.log('info', 'Alertas de técnico remoto desabilitados');
-                    return;
-                }
-                
-                if (this.alertSystem?.exists(this.alertIds.remoteTechnician)) {
-                    this.log('info', 'Alerta de técnico remoto já existe');
-                    return;
-                }
-
-                this.alertSystem?.showServiceTypeQueueAlert(
-                    'Erro: Incompatibilidade Fila x Tipo de Atendimento',
-                    '⚠️ Para fila de <strong>Técnico Remoto</strong>, o tipo de atendimento deve ser <strong>Remoto</strong>.',
-                    'error',
-                    this.alertIds.remoteTechnician
-                );
-                
-                this.log('info', 'Alerta de técnico remoto adicionado');
-            } catch (error) {
-                this.log('error', 'Erro ao adicionar alerta de técnico remoto', error);
-            }
-        }
-
-        /**
-         * Adicionar alerta para fila presencial com tipo remoto
-         */
-        addPresentialQueueRemoteTypeAlert() {
-            try {
-                if (!this.configManager?.isFeatureEnabled('typeOfServiceAlerts')) {
-                    this.log('info', 'Alertas de fila presencial desabilitados');
-                    return;
-                }
-                
-                if (this.alertSystem?.exists(this.alertIds.remoteTechnician)) {
-                    this.log('info', 'Alerta de fila presencial já existe');
-                    return;
-                }
-
-                this.alertSystem?.showServiceTypeQueueAlert(
-                    'Erro: Incompatibilidade Fila x Tipo de Atendimento',
-                    '⚠️ A fila selecionada é <strong>presencial</strong>, mas o tipo de atendimento está marcado como <strong>Remoto</strong>. Altere para <strong>Presencial</strong>.',
-                    'error',
-                    this.alertIds.remoteTechnician
-                );
-                
-                this.log('info', 'Alerta de fila presencial adicionado');
-            } catch (error) {
-                this.log('error', 'Erro ao adicionar alerta de fila presencial', error);
-            }
-        }
-
-        /**
-         * Adicionar alerta para classificação de serviço
-         */
-        addServiceClassificationAlert() {
-            try {
-                if (!this.configManager?.isFeatureEnabled('serviceClassificationAlerts')) {
-                    this.log('info', 'Alertas de classificação de serviço desabilitados');
-                    return;
-                }
-                
-                if (this.alertSystem?.exists(this.alertIds.serviceClassification)) {
-                    this.log('info', 'Alerta de classificação de serviço já existe');
-                    return;
-                }
-
-                this.alertSystem?.showServiceTypeQueueAlert(
-                    'Erro: Classificação de Serviço',
-                    '⚠️ Garanta que a classificação do serviço seja adequada ao atendimento.',
-                    'error',
-                    this.alertIds.serviceClassification
-                );
-                
-                this.log('info', 'Alerta de classificação de serviço adicionado');
-            } catch (error) {
-                this.log('error', 'Erro ao adicionar alerta de classificação de serviço', error);
             }
         }
 
@@ -519,10 +406,8 @@
                     this.log('info', 'Validação Técnico Local', validationData);
                     
                     if (isLocalQueue && !isPresencial) {
-                        // Fila é Técnico Local mas tipo não é Presencial - mostrar alerta
-                        if (!alertExists) {
-                            this.addLocalTechnicianAlert();
-                        }
+                        // Fila é Técnico Local mas tipo não é Presencial - inconsistência detectada
+                        this.log('info', 'Inconsistência detectada: Técnico Local requer tipo Presencial');
                     } else if (alertExists) {
                         // Condições não se aplicam mais - remover alerta
                         this.alertSystem?.removeAlert(this.alertIds.localTechnician);
@@ -558,7 +443,7 @@
                         queueText = selectedOption ? selectedOption.text : '';
                         
                         // Verificar se é uma fila de técnico remoto/nível 1
-                        const remoteKeywords = ['técnico remoto', 'nível 1', 'nivel 1', 'remoto'];
+                        const remoteKeywords = ['técnico remoto', 'nível 1', 'nivel 1', 'remoto', 'Remoto'];
                         isRemoteQueue = remoteKeywords.some(keyword => 
                             queueText.toLowerCase().includes(keyword)
                         );
@@ -582,13 +467,13 @@
                     const hasIncompatibility = (isRemoteQueue && !isRemoto) || (!isRemoteQueue && isRemoto);
                     
                     if (hasIncompatibility && !alertExists) {
-                        // Determinar mensagem baseada no cenário
+                        // Inconsistência detectada
                         if (isRemoteQueue && !isRemoto) {
                             // Cenário 1: Fila remota com tipo presencial
-                            this.addRemoteTechnicianAlert();
+                            this.log('info', 'Inconsistência detectada: Fila remota requer tipo Remoto');
                         } else if (!isRemoteQueue && isRemoto) {
                             // Cenário 2: Fila presencial com tipo remoto
-                            this.addPresentialQueueRemoteTypeAlert();
+                            this.log('info', 'Inconsistência detectada: Fila presencial requer tipo Presencial');
                         }
                     } else if (!hasIncompatibility && alertExists) {
                         // Não há mais incompatibilidade - remover alerta
@@ -640,7 +525,7 @@
                     const needsAlert = false; // Placeholder
                     
                     if (needsAlert) {
-                        this.addServiceClassificationAlert();
+                        this.log('info', 'Classificação de serviço requer atenção');
                     }
                     
                     this.log('info', 'Validação de classificação de serviço concluída');

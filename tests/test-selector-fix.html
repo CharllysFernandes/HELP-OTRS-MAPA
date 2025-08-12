@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Correção Seletores</title>
+</head>
+<body>
+    <h1>Teste de Correção dos Seletores CSS</h1>
+    
+    <select id="DynamicField_PRITipoAtendimento">
+        <option value="">-- Selecione --</option>
+        <option value="P" selected>Presencial</option>
+        <option value="R">Remoto</option>
+    </select>
+
+    <div id="results"></div>
+
+    <script src="src/core/AlertSystem.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            results.innerHTML += `<p>${message}</p>`;
+        }
+
+        // Teste dos seletores corrigidos
+        const testSelectors = [
+            '#DynamicField_PRITipoAtendimento option:checked',
+            '#DynamicField_PRITipoAtendimento',
+            'select[id*="DynamicField"]',
+            'select[id*="Tipo"]'
+        ];
+
+        log('<h3>Testando Seletores Corrigidos:</h3>');
+
+        testSelectors.forEach(selector => {
+            try {
+                const elements = document.querySelectorAll(selector);
+                log(`✅ ${selector}: ${elements.length} elemento(s) encontrado(s)`);
+                
+                elements.forEach((el, i) => {
+                    log(`  [${i}] Tag: ${el.tagName}, Value: "${el.value}", Text: "${el.textContent}"`);
+                });
+            } catch (error) {
+                log(`❌ ${selector}: ERRO - ${error.message}`);
+            }
+        });
+
+        // Teste do AlertSystem
+        try {
+            const alertSystem = new AlertSystem();
+            const detectedType = alertSystem.detectCurrentServiceType();
+            log(`<h3>Resultado detectCurrentServiceType(): "${detectedType}"</h3>`);
+        } catch (error) {
+            log(`❌ Erro no AlertSystem: ${error.message}`);
+        }
+    </script>
+</body>
+</html>

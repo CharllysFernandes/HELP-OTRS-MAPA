@@ -745,6 +745,91 @@
         }
 
         /**
+         * Mostrar alerta de validação de tipo de atendimento
+         * @param {string} queue - Fila selecionada
+         * @param {string} currentServiceType - Tipo de atendimento atual
+         * @param {string} expectedServiceType - Tipo de atendimento esperado
+         */
+        showServiceTypeValidationAlert(queue, currentServiceType, expectedServiceType) {
+            const id = 'service-type-validation-alert';
+            
+            // Remover alerta anterior se existir
+            this.remove(id);
+            
+            // Criar dados da mensagem formatada
+            const messageData = {
+                parts: [
+                    { type: 'text', content: '⚠️ Inconsistência detectada: A fila ' },
+                    { type: 'strong', content: queue },
+                    { type: 'text', content: ' esperava tipo ' },
+                    { type: 'strong', content: expectedServiceType },
+                    { type: 'text', content: ', mas foi selecionado ' },
+                    { type: 'strong', content: currentServiceType },
+                    { type: 'text', content: '.' }
+                ]
+            };
+            
+            // Injetar estilos e criar elemento formatado
+            this.injectStyles();
+            const alert = this.createFormattedAlertElement(id, 'error', '', messageData, true);
+            
+            // Tentar inserir ao lado do campo de tipo de atendimento primeiro
+            const serviceField = document.querySelector('#DynamicField_PRITipoAtendimento') ||
+                                document.querySelector('[name*="TipoAtendimento"]') ||
+                                document.querySelector('[name*="ServiceType"]');
+                                
+            let inserted = false;
+            
+            if (serviceField) {
+                // Encontrar o container do campo (.Field)
+                const fieldContainer = serviceField.closest('.Field');
+                if (fieldContainer) {
+                    // Criar container para o alerta ao lado do campo
+                    let alertSideContainer = fieldContainer.querySelector('.help-otrs-queue-alert-container');
+                    
+                    if (!alertSideContainer) {
+                        alertSideContainer = document.createElement('div');
+                        alertSideContainer.className = 'help-otrs-queue-alert-container';
+                        alertSideContainer.style.cssText = `
+                            position: relative;
+                            display: inline-block;
+                            width: auto;
+                        `;
+                        
+                        // Inserir logo após o campo, mas antes das mensagens de erro
+                        const errorDiv = fieldContainer.querySelector('[id*="Error"], [id*="ServerError"]');
+                        if (errorDiv) {
+                            fieldContainer.insertBefore(alertSideContainer, errorDiv);
+                        } else {
+                            fieldContainer.appendChild(alertSideContainer);
+                        }
+                    }
+                    
+                    // Limpar container e inserir novo alerta
+                    alertSideContainer.innerHTML = '';
+                    alertSideContainer.appendChild(alert);
+                    inserted = true;
+                }
+            }
+            
+            // Fallback: inserir próximo ao campo de fila
+            if (!inserted) {
+                inserted = this.insertAlertBesideQueueField(alert);
+            }
+            
+            // Fallback final: inserir acima do botão
+            if (!inserted) {
+                inserted = this.insertAlertAboveButton(alert);
+            }
+            
+            if (inserted) {
+                this.alerts.set(id, alert);
+                this.observeAlertRemoval(id, alert);
+                console.log(`Help OTRS Alert [error]: Service Type Validation - ${queue}: ${currentServiceType} -> ${expectedServiceType}`);
+            }
+        }
+
+        /**
          * Validar e exibir alertas de perfil e tipo de atendimento
          * @param {Object} configManager 
          * @param {Object} queueValidator 
@@ -762,6 +847,61 @@
                 this.remove('user-profile-alert');
                 console.log('Help OTRS: Fila não selecionada ou inválida, alerta de perfil removido');
             }
+            
+            // Validação cruzada entre fila e tipo de atendimento
+            if (this.isValidQueue(currentQueue)) {
+                const currentServiceType = this.detectCurrentServiceType();
+                const expectedServiceType = this.getExpectedServiceTypeForQueue(currentQueue);
+                
+                // Se conseguimos detectar ambos os valores e eles são inconsistentes
+                if (currentServiceType && expectedServiceType && 
+                    currentServiceType !== expectedServiceType) {
+                    
+                    this.showServiceTypeValidationAlert(currentQueue, currentServiceType, expectedServiceType);
+                    console.log(`Help OTRS: Inconsistência detectada - Fila: ${currentQueue}, Atual: ${currentServiceType}, Esperado: ${expectedServiceType}`);
+                } else {
+                    // Remover alerta de validação se não há inconsistência
+                    this.remove('service-type-validation-alert');
+                    console.log('Help OTRS: Nenhuma inconsistência de tipo de atendimento detectada');
+                }
+            } else {
+                // Remover alerta de validação se fila não é válida
+                this.remove('service-type-validation-alert');
+                console.log('Help OTRS: Fila inválida - removendo alertas de validação');
+            }
+        }
+
+        /**
+         * Determinar tipo de atendimento esperado baseado na fila
+         * @param {string} queue - Nome da fila
+         * @returns {string|null}
+         */
+        getExpectedServiceTypeForQueue(queue) {
+            if (!queue || typeof queue !== 'string') {
+                return null;
+            }
+            
+            const queueLower = queue.toLowerCase().trim();
+            
+            // Regras específicas para determinar tipo esperado
+            if (queueLower.includes('técnico local') || 
+                queueLower.includes('tecnico local') ||
+                queueLower.includes('presencial') ||
+                queueLower.includes('local')) {
+                return 'Presencial';
+            }
+            
+            if (queueLower.includes('remoto') || 
+                queueLower.includes('nível 1') ||
+                queueLower.includes('nivel 1') ||
+                queueLower.includes('n1') ||
+                queueLower.includes('distância') ||
+                queueLower.includes('distancia')) {
+                return 'Remoto';
+            }
+            
+            // Padrão se não conseguir determinar
+            return null;
         }
 
         /**
@@ -784,14 +924,14 @@
             // Procurar por elementos que indiquem tipo de atendimento
             const serviceSelectors = [
                 'input[name*="ServiceType"]:checked',
-                'select[name*="ServiceType"] option:selected',
+                'select[name*="ServiceType"]',
                 'input[name*="TipoAtendimento"]:checked',
-                'select[name*="TipoAtendimento"] option:selected',
+                'select[name*="TipoAtendimento"]',
                 // Campos dinâmicos comuns - corrigido seletores inválidos
                 'input[id*="DynamicField"]:checked',
-                'select[id*="DynamicField"] option:selected',
+                'select[id*="DynamicField"]',
                 'input[id*="Tipo"]:checked',
-                'select[id*="Tipo"] option:selected'
+                'select[id*="Tipo"]'
             ];
             
             let allElements = [];
@@ -808,10 +948,36 @@
             let result = null;
             
             for (const element of allElements) {
-                const value = element.value || element.textContent;
+                let value = null;
+                
+                // Para elementos select, pegar o valor corretamente
+                if (element.tagName === 'SELECT') {
+                    value = element.value;
+                    // Se não há valor no select, tentar pegar o texto da opção selecionada
+                    if (!value && element.selectedIndex >= 0) {
+                        const selectedOption = element.options[element.selectedIndex];
+                        value = selectedOption ? selectedOption.textContent : null;
+                    }
+                } else {
+                    // Para outros elementos (input, option, etc.)
+                    value = element.value || element.textContent;
+                }
+                
                 if (value && value.trim()) {
-                    // Normalizar valores
-                    const normalizedValue = value.toLowerCase();
+                    const trimmedValue = value.trim();
+                    
+                    // Tratar valores específicos do campo DynamicField_PRITipoAtendimento
+                    if (trimmedValue === 'R') {
+                        result = 'Remoto';
+                        break;
+                    }
+                    if (trimmedValue === 'P') {
+                        result = 'Presencial';
+                        break;
+                    }
+                    
+                    // Normalizar valores por texto
+                    const normalizedValue = trimmedValue.toLowerCase();
                     if (normalizedValue.includes('remoto') || normalizedValue.includes('distancia')) {
                         result = 'Remoto';
                         break;

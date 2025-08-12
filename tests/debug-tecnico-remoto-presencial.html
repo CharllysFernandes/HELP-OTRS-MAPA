@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>🔍 Debug: Técnico Remoto + Presencial</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        select {
+            width: 300px;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .debug-section {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border: 2px solid #007cba;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .info { color: #007cba; font-weight: bold; }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .step { 
+            margin: 10px 0; 
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #007cba;
+        }
+        .step-title { font-weight: bold; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Análise: Técnico Remoto + Presencial</h1>
+        <p><strong>Objetivo:</strong> Descobrir por que esta combinação não gera alerta de inconsistência.</p>
+
+        <div class="form-section">
+            <h3>Formulário de Teste</h3>
+            <label>Fila:</label>
+            <select id="Dest" name="Dest">
+                <option value="">-- Selecione uma fila --</option>
+                <option value="Técnico Local">Técnico Local</option>
+                <option value="Técnico Remoto">Técnico Remoto</option>
+                <option value="Suporte Presencial">Suporte Presencial</option>
+            </select>
+            <br>
+            
+            <label>Tipo de Atendimento:</label>
+            <select id="DynamicField_PRITipoAtendimento" name="DynamicField_PRITipoAtendimento">
+                <option value="">-- Selecione o tipo --</option>
+                <option value="P">Presencial</option>
+                <option value="R">Remoto</option>
+            </select>
+        </div>
+
+        <div class="debug-section">
+            <h3>🔧 Análise Passo a Passo</h3>
+            <button onclick="runFullAnalysis()">🚀 Executar Análise Completa</button>
+            <button onclick="testSpecificScenario()">🎯 Testar: Técnico Remoto + Presencial</button>
+            <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script src="src/core/AlertSystem.js"></script>
+    <script>
+        let alertSystem = null;
+        const resultsDiv = document.getElementById('results');
+
+        // Mock objects
+        const mockConfigManager = {
+            getUserProfile: () => 'Debug User'
+        };
+
+        const mockQueueValidator = {
+            getCurrentQueue: () => {
+                const select = document.querySelector('#Dest');
+                return select ? select.value : '';
+            }
+        };
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        function createStep(title, content) {
+            const step = document.createElement('div');
+            step.className = 'step';
+            step.innerHTML = `
+                <div class="step-title">${title}</div>
+                <div>${content}</div>
+            `;
+            resultsDiv.appendChild(step);
+        }
+
+        function testSpecificScenario() {
+            clearResults();
+            log('🎯 <strong>TESTE ESPECÍFICO: Técnico Remoto + Presencial</strong>', 'info');
+            
+            // Configurar cenário
+            document.querySelector('#Dest').value = 'Técnico Remoto';
+            document.querySelector('#DynamicField_PRITipoAtendimento').value = 'P';
+            
+            log('⚙️ Cenário configurado: Fila="Técnico Remoto", Tipo="P" (Presencial)', 'info');
+            
+            setTimeout(() => runFullAnalysis(), 100);
+        }
+
+        function runFullAnalysis() {
+            if (!alertSystem) {
+                try {
+                    alertSystem = new AlertSystem();
+                    log('✅ AlertSystem inicializado', 'success');
+                } catch (error) {
+                    log(`❌ Erro ao inicializar AlertSystem: ${error.message}`, 'error');
+                    return;
+                }
+            }
+
+            const currentQueue = mockQueueValidator.getCurrentQueue();
+            const serviceField = document.querySelector('#DynamicField_PRITipoAtendimento');
+            const serviceValue = serviceField ? serviceField.value : '';
+            const serviceText = serviceField && serviceField.selectedIndex >= 0 ? 
+                serviceField.options[serviceField.selectedIndex].textContent : '';
+
+            log('<br><strong>📊 ESTADO ATUAL:</strong>', 'info');
+            log(`Fila: "${currentQueue}"`, 'info');
+            log(`Campo Service Value: "${serviceValue}"`, 'info');
+            log(`Campo Service Text: "${serviceText}"`, 'info');
+
+            // PASSO 1: Testar detectCurrentServiceType()
+            createStep('1️⃣ detectCurrentServiceType()', '');
+            try {
+                const detectedType = alertSystem.detectCurrentServiceType();
+                log(`✅ Tipo detectado: "${detectedType}"`, detectedType ? 'success' : 'warning');
+                
+                // Debug dos seletores
+                const selectors = [
+                    '#DynamicField_PRITipoAtendimento option:checked',
+                    '#DynamicField_PRITipoAtendimento',
+                    'select[id*="DynamicField"]'
+                ];
+                
+                for (const selector of selectors) {
+                    try {
+                        const elements = document.querySelectorAll(selector);
+                        log(`  Seletor "${selector}": ${elements.length} elemento(s)`, 'info');
+                        
+                        elements.forEach((el, i) => {
+                            let value = null;
+                            if (el.tagName === 'SELECT') {
+                                value = el.value;
+                                const selectedOption = el.selectedIndex >= 0 ? el.options[el.selectedIndex] : null;
+                                const optionText = selectedOption ? selectedOption.textContent : 'N/A';
+                                log(`    [${i}] Tag: ${el.tagName}, Value: "${value}", SelectedIndex: ${el.selectedIndex}, OptionText: "${optionText}"`, 'info');
+                            } else {
+                                value = el.value || el.textContent;
+                                log(`    [${i}] Tag: ${el.tagName}, Value: "${value}", TextContent: "${el.textContent}"`, 'info');
+                            }
+                        });
+                    } catch (error) {
+                        log(`    ❌ Erro no seletor: ${error.message}`, 'error');
+                    }
+                }
+                
+                // Testar manualmente a lógica de detecção
+                log('🔍 Testando lógica de detecção manual:', 'info');
+                const selectElement = document.querySelector('#DynamicField_PRITipoAtendimento');
+                if (selectElement) {
+                    const rawValue = selectElement.value;
+                    log(`  Raw Value do Select: "${rawValue}"`, 'info');
+                    
+                    if (rawValue === 'P') {
+                        log(`  ✅ Detectou "P" - deveria retornar "Presencial"`, 'success');
+                    } else if (rawValue === 'R') {
+                        log(`  ✅ Detectou "R" - deveria retornar "Remoto"`, 'success');
+                    } else {
+                        log(`  ⚠️ Valor não reconhecido: "${rawValue}"`, 'warning');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Erro em detectCurrentServiceType: ${error.message}`, 'error');
+            }
+
+            // PASSO 2: Testar getExpectedServiceTypeForQueue()
+            createStep('2️⃣ getExpectedServiceTypeForQueue()', '');
+            try {
+                const expectedType = alertSystem.getExpectedServiceTypeForQueue(currentQueue);
+                log(`✅ Tipo esperado para "${currentQueue}": "${expectedType}"`, expectedType ? 'success' : 'warning');
+                
+                // Debug das regras
+                if (currentQueue) {
+                    const queueLower = currentQueue.toLowerCase().trim();
+                    log(`  Queue normalizada: "${queueLower}"`, 'info');
+                    
+                    const rules = {
+                        'contém "remoto"': queueLower.includes('remoto'),
+                        'contém "técnico local" ou "tecnico local"': queueLower.includes('técnico local') || queueLower.includes('tecnico local'),
+                        'contém "presencial"': queueLower.includes('presencial'),
+                        'contém "local"': queueLower.includes('local'),
+                        'contém "nível 1" ou "nivel 1"': queueLower.includes('nível 1') || queueLower.includes('nivel 1')
+                    };
+                    
+                    for (const [rule, result] of Object.entries(rules)) {
+                        log(`  ${rule}: ${result ? '✅ SIM' : '❌ NÃO'}`, result ? 'success' : 'info');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Erro em getExpectedServiceTypeForQueue: ${error.message}`, 'error');
+            }
+
+            // PASSO 3: Testar lógica de comparação
+            createStep('3️⃣ Lógica de Validação', '');
+            try {
+                const currentServiceType = alertSystem.detectCurrentServiceType();
+                const expectedServiceType = alertSystem.getExpectedServiceTypeForQueue(currentQueue);
+                
+                log(`Tipo atual: "${currentServiceType}"`, 'info');
+                log(`Tipo esperado: "${expectedServiceType}"`, 'info');
+                
+                const hasInconsistency = currentServiceType && expectedServiceType && 
+                                       currentServiceType !== expectedServiceType;
+                
+                log(`Há inconsistência? ${hasInconsistency ? '🚨 SIM' : '✅ NÃO'}`, hasInconsistency ? 'warning' : 'success');
+                
+                if (hasInconsistency) {
+                    log('🔔 DEVERIA MOSTRAR ALERTA!', 'warning');
+                    
+                    // Testar se isValidQueue funciona
+                    const isValid = alertSystem.isValidQueue(currentQueue);
+                    log(`Fila é válida? ${isValid ? '✅ SIM' : '❌ NÃO'}`, isValid ? 'success' : 'error');
+                    
+                    if (isValid) {
+                        log('🚀 Executando showServiceTypeValidationAlert...', 'info');
+                        try {
+                            alertSystem.showServiceTypeValidationAlert(currentQueue, currentServiceType, expectedServiceType);
+                            log('✅ showServiceTypeValidationAlert executado', 'success');
+                        } catch (error) {
+                            log(`❌ Erro em showServiceTypeValidationAlert: ${error.message}`, 'error');
+                        }
+                    }
+                } else {
+                    if (!currentServiceType) {
+                        log('⚠️ Problema: Não conseguiu detectar tipo atual', 'warning');
+                    }
+                    if (!expectedServiceType) {
+                        log('⚠️ Problema: Não conseguiu determinar tipo esperado', 'warning');
+                    }
+                    if (currentServiceType === expectedServiceType) {
+                        log('ℹ️ Tipos são iguais - sem inconsistência', 'info');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Erro na validação: ${error.message}`, 'error');
+            }
+
+            // PASSO 4: Testar validateAndShowAlerts completo
+            createStep('4️⃣ validateAndShowAlerts() Completo', '');
+            try {
+                alertSystem.validateAndShowAlerts(mockConfigManager, mockQueueValidator);
+                log('✅ validateAndShowAlerts executado', 'success');
+            } catch (error) {
+                log(`❌ Erro em validateAndShowAlerts: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-inicialização
+        window.addEventListener('load', () => {
+            log('🔧 Sistema de debug carregado. Use os botões para analisar o problema.', 'info');
+        });
+
+        // Event listeners para atualização em tempo real
+        document.querySelector('#Dest')?.addEventListener('change', () => {
+            log(`📝 Fila alterada para: "${document.querySelector('#Dest').value}"`, 'info');
+        });
+
+        document.querySelector('#DynamicField_PRITipoAtendimento')?.addEventListener('change', () => {
+            const field = document.querySelector('#DynamicField_PRITipoAtendimento');
+            log(`📝 Tipo alterado - Value: "${field.value}", Text: "${field.options[field.selectedIndex]?.textContent}"`, 'info');
+        });
+    </script>
+</body>
+</html>

@@ -620,6 +620,11 @@
                     
                     this.log('info', 'Resultado da validação', validation);
                     
+                    // SEMPRE executar validação de tipo de atendimento, independente da compatibilidade de perfil
+                    if (validation.currentQueue && this.alertSystem && this.alertSystem.validateAndShowAlerts) {
+                        this.alertSystem.validateAndShowAlerts(this.configManager, this);
+                    }
+                    
                     // Só mostrar alerta de perfil e fila se há incompatibilidade
                     if (validation.shouldShowWarning) {
                         this.log('info', 'Mostrando alerta - perfis incompatíveis');
@@ -627,11 +632,6 @@
                         if (validation.currentQueue && validation.userProfile && this.alertSystem) {
                             // Mostrar alerta de perfil do usuário
                             this.alertSystem.showUserProfileAlert?.(validation.userProfile, validation.currentQueue);
-                            
-                            // Mostrar alerta de validação completa
-                            if (this.alertSystem.validateAndShowAlerts) {
-                                this.alertSystem.validateAndShowAlerts(this.configManager, this);
-                            }
                             
                             // Mostrar aviso de compatibilidade detalhado
                             const alertId = 'queue-compatibility-warning';

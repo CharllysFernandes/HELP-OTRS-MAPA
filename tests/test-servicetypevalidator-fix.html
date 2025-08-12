@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test ServiceTypeValidator - Help OTRS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 900px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .Field {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        select, input {
+            width: 200px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+        .test-controls {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary { background: #007cba; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        
+        .scenario {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #007cba;
+        }
+
+        .status-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .status-value {
+            font-weight: bold;
+        }
+
+        .error-log {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🛠️ Test ServiceTypeValidator Fix</h1>
+        <p>Este teste verifica se as correções do método <code>showServiceTypeQueueAlert</code> estão funcionando corretamente.</p>
+
+        <div class="form-section">
+            <h3>Simulação de Formulário OTRS</h3>
+            
+            <div class="Field">
+                <label for="Dest">Fila (Queue):</label>
+                <select id="Dest" name="Dest">
+                    <option value="">-- Selecione uma fila --</option>
+                    <option value="Técnico Local">Técnico Local</option>
+                    <option value="Técnico Remoto">Técnico Remoto</option>
+                    <option value="Suporte Presencial">Suporte Presencial</option>
+                    <option value="Atendimento Remoto">Atendimento Remoto</option>
+                    <option value="Helpdesk">Helpdesk</option>
+                </select>
+            </div>
+
+            <div class="Field">
+                <label for="DynamicField_PRITipoAtendimento">Tipo de Atendimento:</label>
+                <select id="DynamicField_PRITipoAtendimento" name="DynamicField_PRITipoAtendimento">
+                    <option value="">-- Selecione o tipo --</option>
+                    <option value="Presencial">Presencial</option>
+                    <option value="Remoto">Remoto</option>
+                </select>
+            </div>
+
+            <div class="Field">
+                <label for="ServiceID">Classificação do Serviço:</label>
+                <select id="ServiceID" name="ServiceID">
+                    <option value="">-- Selecione a classificação --</option>
+                    <option value="1">Suporte Técnico</option>
+                    <option value="2">Manutenção</option>
+                    <option value="3">Instalação</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="status-panel">
+            <h3>📊 Status Atual</h3>
+            <div class="status-item">
+                <span>Fila Selecionada:</span>
+                <span class="status-value" id="currentQueue">-</span>
+            </div>
+            <div class="status-item">
+                <span>Tipo de Atendimento:</span>
+                <span class="status-value" id="currentServiceType">-</span>
+            </div>
+            <div class="status-item">
+                <span>Classificação:</span>
+                <span class="status-value" id="currentService">-</span>
+            </div>
+        </div>
+
+        <div class="test-controls">
+            <h3>🧪 Testes do ServiceTypeValidator</h3>
+            
+            <div class="scenario">
+                <strong>Inicialização:</strong>
+                <button class="btn-primary" onclick="initializeValidator()">
+                    🚀 Inicializar ServiceTypeValidator
+                </button>
+                <button class="btn-success" onclick="runAllValidations()">
+                    ✅ Executar Todas as Validações
+                </button>
+            </div>
+
+            <div class="scenario">
+                <strong>Validações Específicas:</strong>
+                <button class="btn-warning" onclick="validateTechnicalLocal()">
+                    🔧 Validar Técnico Local
+                </button>
+                <button class="btn-warning" onclick="validateTechnicalRemote()">
+                    🌐 Validar Técnico Remoto
+                </button>
+                <button class="btn-warning" onclick="validateServiceType()">
+                    📋 Validar Tipo de Serviço
+                </button>
+            </div>
+
+            <div class="scenario">
+                <strong>Cenários de Teste:</strong>
+                <button class="btn-success" onclick="testScenario('Técnico Local', 'Presencial')">
+                    ✅ Cenário Consistente (Local/Presencial)
+                </button>
+                <button class="btn-danger" onclick="testScenario('Técnico Local', 'Remoto')">
+                    ❌ Cenário Inconsistente (Local/Remoto)
+                </button>
+                <button class="btn-danger" onclick="testScenario('Técnico Remoto', 'Presencial')">
+                    ❌ Cenário Inconsistente (Remoto/Presencial)
+                </button>
+            </div>
+
+            <div class="scenario">
+                <strong>Controles:</strong>
+                <button class="btn-primary" onclick="clearAllAlerts()">🗑️ Limpar Alertas</button>
+                <button class="btn-primary" onclick="clearLog()">📝 Limpar Log</button>
+            </div>
+        </div>
+
+        <div class="test-controls">
+            <h3>📊 Log de Sistema</h3>
+            <div id="testLog" style="background: #f8f9fa; padding: 10px; border: 1px solid #ddd; height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+            <button class="btn-primary" onclick="exportLog()">💾 Exportar Log</button>
+        </div>
+
+        <div id="errorContainer" style="display: none;">
+            <h3>🚨 Erros Encontrados</h3>
+            <div id="errorLog" class="error-log"></div>
+        </div>
+    </div>
+
+    <!-- Scripts Help OTRS -->
+    <script src="src/core/AlertSystem.js"></script>
+    <script src="src/core/ConfigManager.js"></script>
+    <script src="src/modules/QueueValidator.js"></script>
+    <script src="src/modules/ServiceTypeValidator.js"></script>
+    <script>
+        // Variáveis globais
+        let alertSystem = null;
+        let configManager = null;
+        let queueValidator = null;
+        let serviceTypeValidator = null;
+
+        // Log de teste
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const typeColor = {
+                'info': '#007cba',
+                'success': '#28a745',
+                'warning': '#ffc107',
+                'error': '#dc3545'
+            };
+            
+            logDiv.innerHTML += `<div style="color: ${typeColor[type] || '#000'};">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function logError(message, error) {
+            log(`❌ ${message}: ${error.message}`, 'error');
+            
+            const errorContainer = document.getElementById('errorContainer');
+            const errorLog = document.getElementById('errorLog');
+            
+            errorContainer.style.display = 'block';
+            errorLog.innerHTML += `[${new Date().toLocaleTimeString()}] ${message}\n${error.stack}\n\n`;
+        }
+
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = '';
+            document.getElementById('errorContainer').style.display = 'none';
+            document.getElementById('errorLog').innerHTML = '';
+        }
+
+        function exportLog() {
+            const logContent = document.getElementById('testLog').innerText;
+            const errorContent = document.getElementById('errorLog').innerText;
+            
+            const fullLog = `=== LOG DE TESTE ServiceTypeValidator ===\n${new Date().toISOString()}\n\n` +
+                           `=== LOG PRINCIPAL ===\n${logContent}\n\n` +
+                           `=== ERROS ===\n${errorContent}`;
+            
+            const blob = new Blob([fullLog], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `servicetypevalidator-test-${new Date().getTime()}.log`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        // Atualizar status na interface
+        function updateStatus() {
+            try {
+                const queue = document.querySelector('#Dest')?.value || '-';
+                const serviceType = document.querySelector('#DynamicField_PRITipoAtendimento')?.value || '-';
+                const service = document.querySelector('#ServiceID')?.value || '-';
+                
+                document.getElementById('currentQueue').textContent = queue;
+                document.getElementById('currentServiceType').textContent = serviceType;
+                document.getElementById('currentService').textContent = service;
+            } catch (error) {
+                logError('Erro ao atualizar status', error);
+            }
+        }
+
+        // Configurar cenário de teste
+        function testScenario(queueValue, serviceTypeValue, serviceValue = '1') {
+            log(`🧪 Configurando cenário: Queue="${queueValue}", Type="${serviceTypeValue}", Service="${serviceValue}"`, 'info');
+            
+            try {
+                const queueSelect = document.querySelector('#Dest');
+                const serviceSelect = document.querySelector('#DynamicField_PRITipoAtendimento');
+                const classSelect = document.querySelector('#ServiceID');
+                
+                if (queueSelect) queueSelect.value = queueValue;
+                if (serviceSelect) serviceSelect.value = serviceTypeValue;
+                if (classSelect) classSelect.value = serviceValue;
+                
+                updateStatus();
+                log('✓ Cenário configurado', 'success');
+                
+                // Executar validações automaticamente
+                setTimeout(() => {
+                    runAllValidations();
+                }, 200);
+                
+            } catch (error) {
+                logError('Erro ao configurar cenário', error);
+            }
+        }
+
+        // Inicializar ServiceTypeValidator
+        function initializeValidator() {
+            try {
+                log('🚀 Inicializando componentes...', 'info');
+                
+                // Inicializar AlertSystem
+                alertSystem = new AlertSystem();
+                log('✅ AlertSystem inicializado', 'success');
+                
+                // Inicializar ConfigManager
+                configManager = new ConfigManager();
+                log('✅ ConfigManager inicializado', 'success');
+                
+                // Inicializar QueueValidator
+                queueValidator = new QueueValidator(configManager, alertSystem);
+                log('✅ QueueValidator inicializado', 'success');
+                
+                // Inicializar ServiceTypeValidator
+                serviceTypeValidator = new ServiceTypeValidator(configManager, alertSystem);
+                log('✅ ServiceTypeValidator inicializado', 'success');
+                
+                log('🎯 Todos os componentes inicializados com sucesso!', 'success');
+                
+            } catch (error) {
+                logError('Erro na inicialização', error);
+            }
+        }
+
+        // Executar todas as validações
+        async function runAllValidations() {
+            if (!serviceTypeValidator) {
+                log('❌ ServiceTypeValidator não inicializado', 'error');
+                return;
+            }
+
+            try {
+                log('🔄 Executando todas as validações...', 'info');
+                
+                await serviceTypeValidator.validateAll();
+                
+                log('✅ Todas as validações executadas', 'success');
+                
+            } catch (error) {
+                logError('Erro durante validações', error);
+            }
+        }
+
+        // Validações específicas
+        async function validateTechnicalLocal() {
+            if (!serviceTypeValidator) {
+                log('❌ ServiceTypeValidator não inicializado', 'error');
+                return;
+            }
+
+            try {
+                log('🔧 Validando Técnico Local...', 'info');
+                await serviceTypeValidator.validateLocalTechnician();
+                log('✅ Validação de Técnico Local concluída', 'success');
+            } catch (error) {
+                logError('Erro na validação de Técnico Local', error);
+            }
+        }
+
+        async function validateTechnicalRemote() {
+            if (!serviceTypeValidator) {
+                log('❌ ServiceTypeValidator não inicializado', 'error');
+                return;
+            }
+
+            try {
+                log('🌐 Validando Técnico Remoto...', 'info');
+                await serviceTypeValidator.validateRemoteTechnician();
+                log('✅ Validação de Técnico Remoto concluída', 'success');
+            } catch (error) {
+                logError('Erro na validação de Técnico Remoto', error);
+            }
+        }
+
+        async function validateServiceType() {
+            if (!serviceTypeValidator) {
+                log('❌ ServiceTypeValidator não inicializado', 'error');
+                return;
+            }
+
+            try {
+                log('📋 Validando Tipo de Serviço...', 'info');
+                await serviceTypeValidator.validateServiceTypeForQueue();
+                log('✅ Validação de Tipo de Serviço concluída', 'success');
+            } catch (error) {
+                logError('Erro na validação de Tipo de Serviço', error);
+            }
+        }
+
+        // Limpar alertas
+        function clearAllAlerts() {
+            if (alertSystem) {
+                alertSystem.clearAll();
+                log('🗑️ Todos os alertas limpos', 'info');
+            }
+        }
+
+        // Event listeners para os campos
+        function setupEventListeners() {
+            try {
+                document.querySelector('#Dest')?.addEventListener('change', () => {
+                    log('📝 Queue alterada', 'info');
+                    updateStatus();
+                    setTimeout(runAllValidations, 100);
+                });
+                
+                document.querySelector('#DynamicField_PRITipoAtendimento')?.addEventListener('change', () => {
+                    log('📝 Tipo de atendimento alterado', 'info');
+                    updateStatus();
+                    setTimeout(runAllValidations, 100);
+                });
+                
+                document.querySelector('#ServiceID')?.addEventListener('change', () => {
+                    log('📝 Classificação alterada', 'info');
+                    updateStatus();
+                    setTimeout(runAllValidations, 100);
+                });
+                
+            } catch (error) {
+                logError('Erro ao configurar event listeners', error);
+            }
+        }
+
+        // Interceptar erros do console
+        window.addEventListener('error', (event) => {
+            logError('Erro JavaScript capturado', event.error);
+        });
+
+        // Inicializar quando a página carregar
+        window.addEventListener('load', () => {
+            try {
+                log('🌟 Sistema de teste carregado', 'success');
+                updateStatus();
+                setupEventListeners();
+                
+                // Inicializar automaticamente
+                setTimeout(() => {
+                    initializeValidator();
+                }, 500);
+                
+            } catch (error) {
+                logError('Erro na inicialização da página', error);
+            }
+        });
+    </script>
+</body>
+</html>

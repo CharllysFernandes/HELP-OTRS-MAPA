@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🧪 Teste Final: Técnico Remoto + Presencial</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { padding: 8px; margin: 5px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 8px 16px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        select { padding: 5px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste Final: Técnico Remoto + Presencial</h1>
+    
+    <div>
+        <label>Fila:</label>
+        <select id="Dest">
+            <option value="Técnico Remoto">Técnico Remoto</option>
+        </select>
+        
+        <label>Tipo:</label>
+        <select id="DynamicField_PRITipoAtendimento">
+            <option value="P">Presencial</option>
+        </select>
+    </div>
+    
+    <button onclick="testarValidacao()">🚀 Testar Validação</button>
+    <button onclick="limpar()">🗑️ Limpar</button>
+    
+    <div id="output"></div>
+    
+    <script src="src/core/AlertSystem.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            output.appendChild(div);
+        }
+        
+        function limpar() {
+            output.innerHTML = '';
+        }
+        
+        function testarValidacao() {
+            limpar();
+            log('<strong>🧪 TESTE: Técnico Remoto + Presencial</strong>', 'info');
+            
+            try {
+                // Configurar valores
+                document.querySelector('#Dest').value = 'Técnico Remoto';
+                document.querySelector('#DynamicField_PRITipoAtendimento').value = 'P';
+                
+                // Criar AlertSystem
+                const alertSystem = new AlertSystem();
+                
+                // Mock objects
+                const mockConfigManager = { getUserProfile: () => 'Test User' };
+                const mockQueueValidator = { 
+                    getCurrentQueue: () => document.querySelector('#Dest').value 
+                };
+                
+                log('✅ AlertSystem inicializado', 'success');
+                
+                // Testar detecção individual
+                const queue = mockQueueValidator.getCurrentQueue();
+                const expectedType = alertSystem.getExpectedServiceTypeForQueue(queue);
+                const detectedType = alertSystem.detectCurrentServiceType();
+                
+                log(`📊 Queue: "${queue}"`, 'info');
+                log(`🎯 Tipo esperado: "${expectedType}"`, expectedType === 'Remoto' ? 'success' : 'error');
+                log(`🔍 Tipo detectado: "${detectedType}"`, detectedType === 'Presencial' ? 'success' : 'error');
+                
+                // Verificar inconsistência
+                const hasInconsistency = expectedType && detectedType && expectedType !== detectedType;
+                log(`⚖️ Há inconsistência? ${hasInconsistency}`, hasInconsistency ? 'warning' : 'error');
+                
+                if (hasInconsistency) {
+                    log(`🚨 SUCESSO! Inconsistência detectada: "${detectedType}" ≠ "${expectedType}"`, 'warning');
+                    
+                    // Testar a validação completa
+                    alertSystem.validateAndShowAlerts(mockConfigManager, mockQueueValidator);
+                    log('🎉 validateAndShowAlerts executado - alerta deveria aparecer!', 'success');
+                } else {
+                    log('❌ PROBLEMA: Inconsistência não detectada', 'error');
+                    if (!expectedType) log('  - Tipo esperado não foi determinado', 'error');
+                    if (!detectedType) log('  - Tipo atual não foi detectado', 'error');
+                    if (expectedType === detectedType) log(`  - Tipos são iguais: "${expectedType}"`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ ERRO: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        // Auto-executar ao carregar
+        window.addEventListener('load', () => {
+            setTimeout(testarValidacao, 500);
+        });
+    </script>
+</body>
+</html>
