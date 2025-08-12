@@ -1,18 +1,42 @@
 {
     "name": "help-otrs-mapa",
-    "version": "2.2.0",
+    "version": "1.0.2",
     "description": "Extensão Help OTRS para sistemas MAPA - Ferramenta de alerta configurável",
     "main": "background.js",
     "scripts": {
-        "version:patch": "node version-bump.js patch",
-        "version:minor": "node version-bump.js minor",
-        "version:major": "node version-bump.js major",
-        "build": "node build.js patch",
-        "build:minor": "node build.js minor",
-        "build:major": "node build.js major",
-        "package": "node package.js",
-        "test": "echo \"Testes implementados via browser console - use helpOtrsDebug.testAllServiceTypeValidation()\"",
-        "clean": "del /Q help-otrs-v*.zip 2>NUL || rm -f help-otrs-v*.zip 2>/dev/null || true"
+        "version:patch": "python scripts/version_bump.py patch",
+        "version:minor": "python scripts/version_bump.py minor",
+        "version:major": "python scripts/version_bump.py major",
+        "version:patch:legacy": "node src/utils/version-bump.js patch",
+        "version:minor:legacy": "node src/utils/version-bump.js minor",
+        "version:major:legacy": "node src/utils/version-bump.js major",
+        "build": "python scripts/build.py patch",
+        "build:dev": "webpack --mode development",
+        "build:minor": "python scripts/build.py minor",
+        "build:major": "python scripts/build.py major",
+        "build:webpack": "webpack --mode production",
+        "build:legacy": "node src/utils/build.js patch",
+        "watch": "webpack --mode development --watch",
+        "lint": "eslint src/**/*.js script.js background.js options.js",
+        "lint:fix": "eslint src/**/*.js script.js background.js options.js --fix",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "test:legacy": "echo \"Testes implementados via browser console - use helpOtrsDebug.testAllServiceTypeValidation()\"",
+        "package": "python scripts/build.py --release-info",
+        "package:legacy": "npm run clean && npm run build && npm run zip",
+        "release": "python scripts/release.py create",
+        "release:minor": "python scripts/release.py create minor",
+        "release:major": "python scripts/release.py create major",
+        "release:dry-run": "python scripts/release.py create --dry-run",
+        "release:list": "python scripts/release.py list",
+        "zip": "cd dist && powershell Compress-Archive -Path * -DestinationPath ../help-otrs-mapa-v2.2.0.zip -Force",
+        "clean": "rimraf dist && (del /Q help-otrs-v*.zip 2>NUL || rm -f help-otrs-v*.zip 2>/dev/null || true)",
+        "dev:chrome": "npm run build:dev && start chrome --load-extension=./dist",
+        "dev:edge": "npm run build:dev && start msedge --load-extension=./dist",
+        "analyze": "webpack-bundle-analyzer dist/content-scripts/main.bundle.js",
+        "validate": "npm run lint && npm run test && npm run build",
+        "migrate": "node migrate-to-modular.js"
     },
     "keywords": [
         "chrome-extension",
@@ -36,7 +60,27 @@
         "url": "https://github.com/CharllysFernandes/HELP-OTRS-MAPA/issues"
     },
     "homepage": "https://github.com/CharllysFernandes/HELP-OTRS-MAPA#readme",
-    "devDependencies": {},
+    "devDependencies": {
+        "@babel/core": "^7.23.0",
+        "@babel/preset-env": "^7.23.0",
+        "babel-loader": "^9.1.3",
+        "copy-webpack-plugin": "^11.0.0",
+        "css-loader": "^6.8.1",
+        "eslint": "^8.52.0",
+        "eslint-config-standard": "^17.1.0",
+        "eslint-plugin-import": "^2.29.0",
+        "eslint-plugin-node": "^11.1.0",
+        "eslint-plugin-promise": "^6.1.1",
+        "eslint-webpack-plugin": "^4.0.1",
+        "jest": "^29.7.0",
+        "jest-chrome": "^0.8.0",
+        "jest-environment-jsdom": "^29.7.0",
+        "rimraf": "^5.0.5",
+        "style-loader": "^3.3.3",
+        "webpack": "^5.89.0",
+        "webpack-bundle-analyzer": "^4.9.1",
+        "webpack-cli": "^5.1.4"
+    },
     "engines": {
         "node": ">=14.0.0"
     },
@@ -52,5 +96,84 @@
             "Edge >= 88",
             "Opera >= 74"
         ]
+    },
+    "jest": {
+        "testEnvironment": "jsdom",
+        "setupFilesAfterEnv": [
+            "jest-chrome/jest"
+        ],
+        "collectCoverageFrom": [
+            "src/**/*.js",
+            "script.js",
+            "background.js",
+            "options.js",
+            "!src/**/*.test.js",
+            "!src/test/**/*.js"
+        ],
+        "coverageThreshold": {
+            "global": {
+                "branches": 60,
+                "functions": 60,
+                "lines": 60,
+                "statements": 60
+            }
+        },
+        "moduleNameMapping": {
+            "^@core/(.*)$": "<rootDir>/src/core/$1",
+            "^@utils/(.*)$": "<rootDir>/src/utils/$1",
+            "^@modules/(.*)$": "<rootDir>/src/modules/$1",
+            "^@ui/(.*)$": "<rootDir>/src/ui/$1",
+            "^@/(.*)$": "<rootDir>/src/$1"
+        }
+    },
+    "eslintConfig": {
+        "env": {
+            "browser": true,
+            "es2021": true,
+            "webextensions": true,
+            "node": true,
+            "jest": true
+        },
+        "extends": [
+            "standard"
+        ],
+        "parserOptions": {
+            "ecmaVersion": 12,
+            "sourceType": "module"
+        },
+        "rules": {
+            "no-console": "warn",
+            "no-debugger": "error",
+            "prefer-const": "error",
+            "no-var": "error",
+            "semi": [
+                "error",
+                "always"
+            ],
+            "quotes": [
+                "error",
+                "single"
+            ],
+            "indent": [
+                "error",
+                4
+            ],
+            "max-len": [
+                "warn",
+                {
+                    "code": 100
+                }
+            ],
+            "no-unused-vars": [
+                "error",
+                {
+                    "argsIgnorePattern": "^_"
+                }
+            ]
+        },
+        "globals": {
+            "chrome": "readonly",
+            "browser": "readonly"
+        }
     }
 }

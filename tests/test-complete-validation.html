@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>✅ Teste Completo: Validação de Tipo</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .result { padding: 8px; margin: 5px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 8px 16px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        select { padding: 5px; margin: 5px; width: 200px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ Teste Completo: Validação de Tipo de Atendimento</h1>
+        
+        <div class="test-section">
+            <h3>Cenário de Teste</h3>
+            <label>Fila:</label>
+            <select id="Dest">
+                <option value="">-- Selecione --</option>
+                <option value="Técnico Local">Técnico Local</option>
+                <option value="Técnico Remoto">Técnico Remoto</option>
+            </select>
+            
+            <label>Tipo:</label>
+            <select id="DynamicField_PRITipoAtendimento">
+                <option value="">-- Selecione --</option>
+                <option value="P">Presencial</option>
+                <option value="R">Remoto</option>
+            </select>
+        </div>
+        
+        <div class="test-section">
+            <h3>Testes Específicos</h3>
+            <button onclick="testarCenario1()">🧪 Técnico Local + Presencial (OK)</button>
+            <button onclick="testarCenario2()">🧪 Técnico Remoto + Remoto (OK)</button>
+            <button onclick="testarCenario3()">🚨 Técnico Local + Remoto (INCONSISTENTE)</button>
+            <button onclick="testarCenario4()">🚨 Técnico Remoto + Presencial (INCONSISTENTE)</button>
+            <button onclick="limpar()">🗑️ Limpar</button>
+        </div>
+        
+        <div id="output"></div>
+    </div>
+    
+    <script src="src/core/AlertSystem.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            output.appendChild(div);
+        }
+        
+        function limpar() {
+            output.innerHTML = '';
+            // Limpar alertas visuais
+            document.querySelectorAll('.help-otrs-alert').forEach(alert => alert.remove());
+        }
+        
+        function testarCenario(queueValue, serviceValue, cenarioNome, deveMostrarAlerta) {
+            limpar();
+            log(`<strong>🧪 TESTE: ${cenarioNome}</strong>`, 'info');
+            
+            try {
+                // Configurar valores
+                document.querySelector('#Dest').value = queueValue;
+                document.querySelector('#DynamicField_PRITipoAtendimento').value = serviceValue;
+                
+                // Criar AlertSystem
+                const alertSystem = new AlertSystem();
+                
+                // Mock objects
+                const mockConfigManager = { getUserProfile: () => 'Test User' };
+                const mockQueueValidator = { 
+                    getCurrentQueue: () => document.querySelector('#Dest').value 
+                };
+                
+                // Executar detecção
+                const queue = mockQueueValidator.getCurrentQueue();
+                const expectedType = alertSystem.getExpectedServiceTypeForQueue(queue);
+                const detectedType = alertSystem.detectCurrentServiceType();
+                
+                log(`📊 Fila: "${queue}"`, 'info');
+                log(`🎯 Tipo esperado: "${expectedType}"`, 'info');
+                log(`🔍 Tipo detectado: "${detectedType}"`, 'info');
+                
+                // Verificar inconsistência
+                const hasInconsistency = expectedType && detectedType && expectedType !== detectedType;
+                log(`⚖️ Há inconsistência? ${hasInconsistency}`, hasInconsistency ? 'warning' : 'info');
+                
+                // Executar validação completa
+                alertSystem.validateAndShowAlerts(mockConfigManager, mockQueueValidator);
+                
+                // Verificar resultado
+                const alertExists = document.querySelector('.help-otrs-alert[id="service-type-validation-alert"]') !== null;
+                const alertIsError = document.querySelector('.help-otrs-alert-error[id="service-type-validation-alert"]') !== null;
+                
+                if (deveMostrarAlerta) {
+                    if (alertExists) {
+                        log(`✅ SUCESSO! Alerta exibido conforme esperado`, 'success');
+                        if (alertIsError) {
+                            log(`✅ Layout correto: alerta com estilo de erro (vermelho)`, 'success');
+                        } else {
+                            log(`⚠️ Layout diferente: alerta sem estilo de erro`, 'warning');
+                        }
+                    } else {
+                        log(`❌ FALHA! Deveria mostrar alerta mas não mostrou`, 'error');
+                    }
+                } else {
+                    if (!alertExists) {
+                        log(`✅ SUCESSO! Nenhum alerta exibido conforme esperado`, 'success');
+                    } else {
+                        log(`❌ FALHA! Não deveria mostrar alerta mas mostrou`, 'error');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ ERRO: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        function testarCenario1() {
+            testarCenario('Técnico Local', 'P', 'Técnico Local + Presencial', false);
+        }
+        
+        function testarCenario2() {
+            testarCenario('Técnico Remoto', 'R', 'Técnico Remoto + Remoto', false);
+        }
+        
+        function testarCenario3() {
+            testarCenario('Técnico Local', 'R', 'Técnico Local + Remoto', true);
+        }
+        
+        function testarCenario4() {
+            testarCenario('Técnico Remoto', 'P', 'Técnico Remoto + Presencial', true);
+        }
+        
+        // Auto-executar teste inicial
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🔧 Sistema carregado. Use os botões para testar diferentes cenários.', 'info');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

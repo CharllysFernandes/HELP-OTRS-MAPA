@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🎯 Teste Isolado: Técnico Remoto + Presencial</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🎯 Teste Isolado: Técnico Remoto + Presencial</h1>
+    
+    <div>
+        <select id="Dest">
+            <option value="Técnico Remoto">Técnico Remoto</option>
+        </select>
+        
+        <select id="DynamicField_PRITipoAtendimento">
+            <option value="P">Presencial</option>
+        </select>
+    </div>
+    
+    <button onclick="runIsolatedTest()">🧪 Executar Teste Isolado</button>
+    <button onclick="runStepByStep()">📋 Passo a Passo</button>
+    <button onclick="clearCache()">🗑️ Limpar Cache</button>
+    
+    <div id="output"></div>
+    
+    <script src="src/core/AlertSystem.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            output.appendChild(div);
+        }
+        
+        function clearResults() {
+            output.innerHTML = '';
+        }
+        
+        function clearCache() {
+            if (window.alertSystem && window.alertSystem.selectorCache) {
+                window.alertSystem.selectorCache.clear();
+                log('🗑️ Cache limpo', 'success');
+            }
+        }
+        
+        function runIsolatedTest() {
+            clearResults();
+            log('<strong>🧪 TESTE ISOLADO: Técnico Remoto + Presencial</strong>', 'info');
+            
+            try {
+                // Garantir que os valores estão configurados
+                document.querySelector('#Dest').value = 'Técnico Remoto';
+                document.querySelector('#DynamicField_PRITipoAtendimento').value = 'P';
+                
+                const alertSystem = new AlertSystem();
+                window.alertSystem = alertSystem; // Para debug
+                
+                // Mock objects
+                const mockConfigManager = { getUserProfile: () => 'Test User' };
+                const mockQueueValidator = { 
+                    getCurrentQueue: () => document.querySelector('#Dest').value 
+                };
+                
+                log('✅ AlertSystem criado', 'success');
+                log('✅ Mocks configurados', 'success');
+                
+                // Teste 1: Verificar valores dos campos
+                const queueValue = document.querySelector('#Dest').value;
+                const serviceValue = document.querySelector('#DynamicField_PRITipoAtendimento').value;
+                
+                log(`📊 Queue Value: "${queueValue}"`, 'info');
+                log(`📊 Service Value: "${serviceValue}"`, 'info');
+                
+                // Teste 2: getExpectedServiceTypeForQueue
+                const expectedType = alertSystem.getExpectedServiceTypeForQueue(queueValue);
+                log(`🎯 Tipo esperado: "${expectedType}"`, expectedType ? 'success' : 'error');
+                
+                // Teste 3: detectCurrentServiceType
+                const detectedType = alertSystem.detectCurrentServiceType();
+                log(`🔍 Tipo detectado: "${detectedType}"`, detectedType ? 'success' : 'error');
+                
+                // Teste 4: Verificar inconsistência
+                const hasInconsistency = detectedType && expectedType && detectedType !== expectedType;
+                log(`⚖️ Há inconsistência? ${hasInconsistency}`, hasInconsistency ? 'warning' : 'info');
+                
+                if (hasInconsistency) {
+                    log(`🚨 INCONSISTÊNCIA DETECTADA!`, 'warning');
+                    log(`  Atual: "${detectedType}" vs Esperado: "${expectedType}"`, 'warning');
+                } else {
+                    if (detectedType === expectedType) {
+                        log(`ℹ️ Tipos são iguais: "${detectedType}"`, 'info');
+                    } else {
+                        log(`❌ Um dos tipos é null/undefined`, 'error');
+                    }
+                }
+                
+                // Teste 5: Executar validação completa
+                log('<br><strong>🔄 Executando validateAndShowAlerts...</strong>', 'info');
+                alertSystem.validateAndShowAlerts(mockConfigManager, mockQueueValidator);
+                log('✅ validateAndShowAlerts executado', 'success');
+                
+            } catch (error) {
+                log(`❌ ERRO: ${error.message}`, 'error');
+                console.error('Erro detalhado:', error);
+            }
+        }
+        
+        function runStepByStep() {
+            clearResults();
+            log('<strong>📋 ANÁLISE PASSO A PASSO</strong>', 'info');
+            
+            try {
+                const alertSystem = new AlertSystem();
+                
+                // PASSO 1: Análise da função getExpectedServiceTypeForQueue
+                log('<br><strong>PASSO 1: getExpectedServiceTypeForQueue</strong>', 'info');
+                const queue = 'Técnico Remoto';
+                const queueLower = queue.toLowerCase().trim();
+                log(`Queue original: "${queue}"`, 'info');
+                log(`Queue normalizada: "${queueLower}"`, 'info');
+                
+                // Testar cada regra individualmente
+                const rules = [
+                    { name: 'contém "técnico local"', test: queueLower.includes('técnico local'), expected: 'Presencial' },
+                    { name: 'contém "tecnico local"', test: queueLower.includes('tecnico local'), expected: 'Presencial' },
+                    { name: 'contém "presencial"', test: queueLower.includes('presencial'), expected: 'Presencial' },
+                    { name: 'contém "local"', test: queueLower.includes('local'), expected: 'Presencial' },
+                    { name: 'contém "remoto"', test: queueLower.includes('remoto'), expected: 'Remoto' },
+                    { name: 'contém "nível 1"', test: queueLower.includes('nível 1'), expected: 'Remoto' },
+                    { name: 'contém "nivel 1"', test: queueLower.includes('nivel 1'), expected: 'Remoto' },
+                    { name: 'contém "n1"', test: queueLower.includes('n1'), expected: 'Remoto' }
+                ];
+                
+                let matchedRule = null;
+                for (const rule of rules) {
+                    log(`  ${rule.name}: ${rule.test ? '✅ MATCH' : '❌ NO MATCH'} → ${rule.test ? rule.expected : 'N/A'}`, 
+                        rule.test ? 'success' : 'info');
+                    if (rule.test && !matchedRule) {
+                        matchedRule = rule;
+                    }
+                }
+                
+                const expectedResult = alertSystem.getExpectedServiceTypeForQueue(queue);
+                log(`Resultado final: "${expectedResult}"`, expectedResult ? 'success' : 'warning');
+                
+                // PASSO 2: Análise da função detectCurrentServiceType
+                log('<br><strong>PASSO 2: detectCurrentServiceType</strong>', 'info');
+                
+                // Configurar campo de teste
+                document.querySelector('#DynamicField_PRITipoAtendimento').value = 'P';
+                
+                // Testar seletores individuais
+                const selectors = [
+                    '#DynamicField_PRITipoAtendimento option:checked',
+                    '#DynamicField_PRITipoAtendimento',
+                    'select[id*="DynamicField"]'
+                ];
+                
+                for (const selector of selectors) {
+                    try {
+                        const elements = document.querySelectorAll(selector);
+                        log(`Seletor "${selector}": ${elements.length} elemento(s)`, 'info');
+                        
+                        for (let i = 0; i < elements.length; i++) {
+                            const el = elements[i];
+                            let value = null;
+                            
+                            if (el.tagName === 'SELECT') {
+                                value = el.value;
+                                log(`  [${i}] SELECT - value="${value}", selectedIndex=${el.selectedIndex}`, 'info');
+                            } else {
+                                value = el.value || el.textContent;
+                                log(`  [${i}] ${el.tagName} - value="${value}", textContent="${el.textContent}"`, 'info');
+                            }
+                            
+                            // Testar a lógica de mapeamento
+                            if (value === 'P') {
+                                log(`    ✅ Valor "P" → deveria mapear para "Presencial"`, 'success');
+                            } else if (value === 'R') {
+                                log(`    ✅ Valor "R" → deveria mapear para "Remoto"`, 'success');
+                            }
+                        }
+                    } catch (error) {
+                        log(`  ❌ Erro no seletor "${selector}": ${error.message}`, 'error');
+                    }
+                }
+                
+                const detectedResult = alertSystem.detectCurrentServiceType();
+                log(`Resultado final: "${detectedResult}"`, detectedResult ? 'success' : 'warning');
+                
+                // PASSO 3: Comparação final
+                log('<br><strong>PASSO 3: Comparação Final</strong>', 'info');
+                log(`Tipo esperado: "${expectedResult}"`, 'info');
+                log(`Tipo detectado: "${detectedResult}"`, 'info');
+                
+                const shouldAlert = expectedResult && detectedResult && expectedResult !== detectedResult;
+                log(`Deveria alertar? ${shouldAlert ? '🚨 SIM' : '❌ NÃO'}`, shouldAlert ? 'warning' : 'info');
+                
+                if (shouldAlert) {
+                    log(`🎯 ESPERADO: Alerta de inconsistência entre "${detectedResult}" e "${expectedResult}"`, 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ ERRO: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-configurar ao carregar
+        window.addEventListener('load', () => {
+            document.querySelector('#Dest').value = 'Técnico Remoto';
+            document.querySelector('#DynamicField_PRITipoAtendimento').value = 'P';
+            log('🔧 Página carregada. Campos configurados para teste.', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - FormDataReuser Campo Localidade</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .test-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .Row {
+            margin-bottom: 20px;
+        }
+        .Field {
+            position: relative;
+        }
+        .InputField_Container {
+            position: relative;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            padding: 5px;
+        }
+        .InputField_InputContainer {
+            display: flex;
+            align-items: center;
+        }
+        .InputField_Search {
+            border: none;
+            outline: none;
+            padding: 5px;
+        }
+        .InputField_Selection {
+            background: #e8f4f8;
+            border: 1px solid #bee5eb;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        select {
+            margin-top: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #e9ecef;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste FormDataReuser - Campo DynamicField_localidade</h1>
+
+    <div class="test-section">
+        <h2>📝 Cenário de Teste</h2>
+        <p>Testando a captura do campo de localidade conforme HTML fornecido pelo usuário.</p>
+        <p>O campo possui estrutura complexa com InputField_Container e select oculto.</p>
+    </div>
+
+    <div class="test-form">
+        <h3>🏢 Formulário de Teste</h3>
+        
+        <!-- Simulação exata do HTML fornecido pelo usuário -->
+        <div class="Row Row_DynamicField_localidade">
+            <label id="LabelDynamicField_localidade" for="DynamicField_localidade" class="Mandatory">
+                <span class="Marker">*</span>
+                Localidade:
+            </label>
+
+            <div class="Field">
+                <div class="InputField_Container" tabindex="-1">
+                    <div class="InputField_InputContainer">
+                        <input id="DynamicField_localidade_Search" 
+                               class="InputField_Search" 
+                               type="text" 
+                               role="search" 
+                               autocomplete="off" 
+                               aria-label="* Localidade:" 
+                               style="width: 126px;">
+                        <div class="InputField_Selection" style="left: 5px; display: block;">
+                            <div class="Text">SEDE</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <select class="DynamicFieldText Modernize Validate_Required" 
+                        id="DynamicField_localidade" 
+                        name="DynamicField_localidade" 
+                        size="1" 
+                        aria-required="true" 
+                        style="display: none;">
+                    <option value="ANEXO - LESTE">ANEXO - LESTE</option>
+                    <option value="ANEXO - OESTE">ANEXO - OESTE</option>
+                    <option value="SEDE" selected="">SEDE</option>
+                    <option value="SUBSOLO">SUBSOLO</option>
+                </select>
+                
+                <span id="AJAXLoaderDynamicField_localidade" class="AJAXLoader" style="display: none;"></span>
+                
+                <div id="DynamicField_localidadeError" class="TooltipErrorMessage" style="display: none;">
+                    <p>Este campo é obrigatório.</p>
+                </div>
+
+                <div id="DynamicField_localidadeServerError" class="TooltipErrorMessage" style="display: none;">
+                    <p>Este campo é obrigatório.</p>
+                </div>
+            </div>
+            <div class="Clear"></div>
+        </div>
+
+        <!-- Área para simular editor de texto -->
+        <div style="margin-top: 30px;">
+            <label for="testEditor">📝 Editor de Texto (simulado):</label>
+            <textarea id="testEditor" style="width: 100%; height: 100px; padding: 10px; margin-top: 10px;"></textarea>
+        </div>
+
+        <!-- Botões de teste -->
+        <div style="margin-top: 20px;">
+            <button onclick="testarCapturaLocalidade()">🎯 Testar Captura Localidade</button>
+            <button onclick="alterarLocalidade()">🔄 Alterar para SUBSOLO</button>
+            <button onclick="limparResultados()">🧹 Limpar Resultados</button>
+        </div>
+
+        <!-- Área de resultados -->
+        <div id="resultados" style="margin-top: 20px;"></div>
+    </div>
+
+    <script src="../src/core/FormDataReuser.js"></script>
+    <script>
+        // Mock objects para teste
+        const mockConfigManager = {
+            isFeatureEnabled: () => true
+        };
+
+        const mockAlertSystem = {
+            showInfo: (id, title, message) => console.log(`INFO: ${title} - ${message}`),
+            showWarning: (id, title, message) => console.log(`WARNING: ${title} - ${message}`),
+            showError: (id, title, message) => console.log(`ERROR: ${title} - ${message}`)
+        };
+
+        // Instanciar FormDataReuser
+        let formDataReuser;
+        
+        try {
+            formDataReuser = new FormDataReuser(mockConfigManager, mockAlertSystem);
+            console.log('✅ FormDataReuser instanciado com sucesso');
+        } catch (error) {
+            console.error('❌ Erro ao instanciar FormDataReuser:', error);
+        }
+
+        // Função para testar captura da localidade
+        async function testarCapturaLocalidade() {
+            const resultadosDiv = document.getElementById('resultados');
+            
+            try {
+                resultadosDiv.innerHTML += '<div class="result">🔍 Iniciando teste de captura...</div>';
+                
+                // Testar se é campo prioritário
+                const isPriority = formDataReuser.isPriorityField('DynamicField_localidade');
+                resultadosDiv.innerHTML += `<div class="result ${isPriority ? 'success' : 'error'}">
+                    Campo é prioritário: ${isPriority ? '✅ Sim' : '❌ Não'}
+                </div>`;
+                
+                // Testar captura com método específico
+                const valorCapturado = await formDataReuser.captureLocalidadeValue('DynamicField_localidade');
+                
+                if (valorCapturado) {
+                    resultadosDiv.innerHTML += `<div class="result success">
+                        ✅ <strong>Sucesso!</strong> Valor capturado: <strong>${valorCapturado}</strong>
+                    </div>`;
+                } else {
+                    resultadosDiv.innerHTML += '<div class="result error">❌ <strong>Falha!</strong> Nenhum valor capturado</div>';
+                }
+                
+                // Testar captura com método complexo
+                const valorComplexo = await formDataReuser.captureComplexFieldValue('DynamicField_localidade');
+                resultadosDiv.innerHTML += `<div class="result">
+                    🔧 Captura complexa: ${valorComplexo || 'Nenhum valor'}
+                </div>`;
+                
+                // Testar captura completa do formulário
+                const dadosCapturados = await formDataReuser.captureFormData();
+                resultadosDiv.innerHTML += `<div class="result ${dadosCapturados ? 'success' : 'error'}">
+                    📋 Captura completa: ${dadosCapturados ? '✅ Sucesso' : '❌ Falha'}
+                </div>`;
+                
+                // Mostrar dados capturados
+                if (Object.keys(formDataReuser.formData).length > 0) {
+                    resultadosDiv.innerHTML += '<div class="result"><strong>🗂️ Dados capturados:</strong><br>';
+                    Object.keys(formDataReuser.formData).forEach(key => {
+                        const data = formDataReuser.formData[key];
+                        resultadosDiv.innerHTML += `&nbsp;&nbsp;• ${data.label}: ${data.value}<br>`;
+                    });
+                    resultadosDiv.innerHTML += '</div>';
+                }
+                
+            } catch (error) {
+                resultadosDiv.innerHTML += `<div class="result error">❌ <strong>Erro:</strong> ${error.message}</div>`;
+                console.error('Erro no teste:', error);
+            }
+        }
+
+        // Função para alterar a localidade selecionada
+        function alterarLocalidade() {
+            const select = document.getElementById('DynamicField_localidade');
+            const textDiv = document.querySelector('.InputField_Selection .Text');
+            
+            // Alterar para SUBSOLO
+            select.selectedIndex = 3; // SUBSOLO é o 4º item (índice 3)
+            textDiv.textContent = 'SUBSOLO';
+            
+            document.getElementById('resultados').innerHTML += 
+                '<div class="result">🔄 Localidade alterada para SUBSOLO</div>';
+        }
+
+        // Função para limpar resultados
+        function limparResultados() {
+            document.getElementById('resultados').innerHTML = '';
+        }
+
+        // Executar teste inicial quando a página carregar
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('resultados').innerHTML = 
+                    '<div class="result">📋 Página carregada. Clique em "Testar Captura Localidade" para começar.</div>';
+            }, 500);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - Help OTRS</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="header-info">
+                    <img src="../ui/logo.png" alt="Help OTRS logo featuring stylized text Help OTRS in blue and green with a friendly tone, set against a clean white background" class="logo">
+                    <div class="header-text">
+                        <h1>Configurações Help OTRS</h1>
+                        <p class="subtitle">Configure os sistemas OTRS e funcionalidades</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button type="button" id="saveBtn" class="btn-primary btn-save-header">Salvar Configurações</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="config-section">
+                <h2>Sistemas OTRS</h2>
+                <div class="otrs-list" id="otrsList">
+                    <!-- Os sistemas OTRS serão carregados aqui via JavaScript -->
+                </div>
+                
+                <div class="add-otrs">
+                    <h3>Adicionar Novo Sistema OTRS</h3>
+                    
+                    <div class="instructions">
+                        <h4>📋 Instruções:</h4>
+                        <ol>
+                            <li>Faça login no sistema OTRS em uma nova aba</li>
+                            <li>Digite o nome e URL do sistema abaixo</li>
+                            <li>Clique em "Carregar Perfis" para buscar automaticamente</li>
+                            <li>Selecione seu perfil/nível e adicione o sistema</li>
+                            <li>Salve as configurações para usar a extensão</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="otrsName">Nome do Sistema: <span class="required">*</span></label>
+                        <input type="text" id="otrsName" placeholder="Ex: MAPA, SFB, MT" required>
+                        <div class="error-message" id="otrsNameError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="otrsUrl">URL Base do OTRS: <span class="required">*</span></label>
+                        <input type="url" id="otrsUrl" placeholder="https://exemplo.agro.gov.br/otrs/" required>
+                        <small>⚠️ <strong>Importante:</strong> Certifique-se de estar logado no sistema OTRS antes de carregar os perfis</small>
+                        <div class="error-message" id="otrsUrlError"></div>
+                    </div>
+                    
+                    <div class="form-group" id="profileGroup" style="display: none;">
+                        <label for="userProfile">Selecione seu Perfil/Nível: <span class="required">*</span></label>
+                        <select id="userProfile" class="form-select" required>
+                            <option value="">Carregando perfis...</option>
+                        </select>
+                        <small>Perfil detectado automaticamente do sistema OTRS</small>
+                        <div class="error-message" id="userProfileError"></div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" id="loadProfilesBtn" class="btn-secondary">Carregar Perfis</button>
+                        <button type="button" id="manualProfileBtn" class="btn-secondary">Inserir Manualmente</button>
+                        <button type="button" id="addOtrsBtn" class="btn-primary" disabled>Adicionar Sistema</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="config-section">
+                <h2>Funcionalidades</h2>
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <label class="switch">
+                            <input type="checkbox" id="alertsEnabled" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <div class="feature-info">
+                            <h4>Alertas de Fila</h4>
+                            <p>Exibe alertas quando você está criando tickets para filas diferentes da sua</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <label class="switch">
+                            <input type="checkbox" id="typeOfServiceAlerts" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <div class="feature-info">
+                            <h4>Alertas de Tipo de Atendimento</h4>
+                            <p>Alerta sobre adequação do tipo de atendimento (Presencial/Remoto)</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <label class="switch">
+                            <input type="checkbox" id="serviceClassificationAlerts" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <div class="feature-info">
+                            <h4>Alertas de Classificação de Serviço</h4>
+                            <p>Alerta sobre adequação da classificação do serviço ao atendimento</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <label class="switch">
+                            <input type="checkbox" id="queueValidation" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <div class="feature-info">
+                            <h4>Validação de Fila</h4>
+                            <p>Verifica se você está atendendo tickets da fila correta</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-item">
+                        <label class="switch">
+                            <input type="checkbox" id="formDataReuser" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <div class="feature-info">
+                            <h4>📋 Reaproveitar Dados do Formulário</h4>
+                            <p>Captura dados preenchidos nos formulários para reutilização fácil no corpo do ticket</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="config-section">
+                <h2>Configurações Avançadas</h2>
+                <div class="advanced-settings">
+                    <div class="form-group">
+                        <label for="delayTime">Tempo de Delay (ms):</label>
+                        <input type="number" id="delayTime" value="500" min="0" max="5000">
+                        <small>Tempo de espera antes de inicializar a extensão (recomendado: 500ms)</small>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="actions">
+                <button type="button" id="resetBtn" class="btn-secondary">Restaurar Padrões</button>
+            </div>
+            <div class="status" id="status"></div>
+        </footer>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Sistema OTRS</h3>
+                <button type="button" class="modal-close" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editOtrsName">Nome do Sistema: <span class="required">*</span></label>
+                    <input type="text" id="editOtrsName" placeholder="Ex: MAPA, SFB, MT" required>
+                    <div class="error-message" id="editOtrsNameError"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editOtrsUrl">URL Base do OTRS: <span class="required">*</span></label>
+                    <input type="url" id="editOtrsUrl" placeholder="https://exemplo.agro.gov.br/otrs/" required>
+                    <div class="error-message" id="editOtrsUrlError"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editUserProfile">Perfil/Nível do Usuário: <span class="required">*</span></label>
+                    <select id="editUserProfile" class="form-select" required>
+                        <!-- Opções serão carregadas dinamicamente pelo JavaScript -->
+                    </select>
+                    <div class="error-message" id="editUserProfileError"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelEditBtn">Cancelar</button>
+                <button type="button" class="btn-primary" id="saveEditBtn">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

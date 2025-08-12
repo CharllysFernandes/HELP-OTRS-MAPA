@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Help OTRS - Arquitetura Modular</title>
+</head>
+<body>
+    <h1>Teste da Extensão Help OTRS</h1>
+    
+    <div id="test-results">
+        <h2>Resultados dos Testes:</h2>
+        <ul id="results-list"></ul>
+    </div>
+
+    <div id="alert-tests">
+        <h2>Teste do Sistema de Alertas:</h2>
+        <button onclick="testAlerts()">🚨 Testar Alertas</button>
+        <button onclick="testValidationAlerts()">🔍 Testar Validação de Fila</button>
+        <button onclick="testCustomAlerts()">📋 Testar Alertas Personalizados</button>
+        <button onclick="testServiceTypeDetection()">🔧 Testar Tipo de Atendimento</button>
+        <button onclick="clearAlerts()">🧹 Limpar Alertas</button>
+    </div>
+
+    <!-- Simular elementos OTRS para teste -->
+    <div id="otrs-simulation" style="display: none;">
+        <select id="Dest">
+            <option value="1">TI::Desenvolvimento||Técnico Local</option>
+            <option value="2" selected>TI::Suporte||Nível 1</option>
+        </select>
+        <input id="Dest_Search" value="TI::Suporte">
+        <div class="InputField_Selection">
+            <div class="Text">TI::Suporte</div>
+        </div>
+        
+        <!-- Simular campo de tipo de atendimento -->
+        <input type="radio" name="ServiceType" value="Remoto" checked> Remoto
+        <input type="radio" name="ServiceType" value="Presencial"> Presencial
+    </div>
+
+    <!-- Simular estrutura do botão OTRS -->
+    <div style="margin-top: 30px; padding: 20px; border: 1px solid #ccc;">
+        <h3>Simulação da Interface OTRS:</h3>
+        <p>Este é o conteúdo do formulário...</p>
+        
+        <div class="Field SpacingTop">
+            <button class="Primary CallForAction" id="submitRichText" accesskey="g" title="Criar (g)" type="submit" value="Criar">
+                <span><i class="fa fa-check-square-o"></i> Criar</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Carregar módulos na ordem correta -->
+    <script src="src/core/ConfigManager.js"></script>
+    <script src="src/core/DebugHelper.js"></script>
+    <script src="src/core/AlertSystem.js"></script>
+    <script src="src/core/FormDataReuser.js"></script>
+    <script src="src/modules/QueueValidator.js"></script>
+    <script src="src/modules/ServiceTypeValidator.js"></script>
+    <script src="src/main.js"></script>
+
+    <script>
+        // Teste básico para verificar se os módulos foram carregados
+        function runTests() {
+            const results = document.getElementById('results-list');
+            const tests = [
+                { name: 'HelpOTRS namespace', test: () => !!window.HelpOTRS },
+                { name: 'ConfigManager', test: () => !!window.HelpOTRS.ConfigManager },
+                { name: 'DebugHelper', test: () => !!window.HelpOTRS.DebugHelper },
+                { name: 'AlertSystem', test: () => !!window.HelpOTRS.AlertSystem },
+                { name: 'FormDataReuser', test: () => !!window.HelpOTRS.FormDataReuser },
+                { name: 'QueueValidator', test: () => !!window.HelpOTRS.QueueValidator },
+                { name: 'ServiceTypeValidator', test: () => !!window.HelpOTRS.ServiceTypeValidator },
+                { name: 'HelpOtrsApp', test: () => !!window.HelpOtrsApp }
+            ];
+
+            tests.forEach(test => {
+                const li = document.createElement('li');
+                const result = test.test();
+                li.textContent = `${test.name}: ${result ? '✅ OK' : '❌ FALHOU'}`;
+                li.style.color = result ? 'green' : 'red';
+                results.appendChild(li);
+            });
+
+            console.log('Help OTRS: Testes de módulos executados');
+        }
+
+        // Executar testes após carregamento
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 1000);
+        });
+
+        // Teste do sistema de alertas
+        function testAlerts() {
+            if (window.HelpOTRS && window.HelpOTRS.AlertSystem) {
+                const alertSystem = new window.HelpOTRS.AlertSystem();
+                
+                alertSystem.showError('test-error', '❌ Erro de Teste', 'Este é um alerta de erro para demonstração');
+                
+                setTimeout(() => {
+                    alertSystem.showWarning('test-warning', '⚠️ Aviso de Teste', 'Este é um alerta de aviso para demonstração');
+                }, 1000);
+                
+                setTimeout(() => {
+                    alertSystem.showInfo('test-info', 'ℹ️ Info de Teste', 'Este é um alerta informativo para demonstração');
+                }, 2000);
+                
+                setTimeout(() => {
+                    alertSystem.showSuccess('test-success', '✅ Sucesso de Teste', 'Este é um alerta de sucesso para demonstração');
+                }, 3000);
+
+                setTimeout(() => {
+                    alertSystem.showQueueWarning('test-queue', 'Fila incompatível com perfil de usuário', 'TI::Desenvolvimento', 'Técnico Local');
+                }, 4000);
+            }
+        }
+
+        function testValidationAlerts() {
+            if (window.HelpOTRS) {
+                try {
+                    // Simular configuração
+                    const configManager = new window.HelpOTRS.ConfigManager();
+                    const alertSystem = new window.HelpOTRS.AlertSystem();
+                    
+                    // Teste 1: Perfis COMPATÍVEIS - Nível 1 (perfil) vs Técnico Remoto (fila)
+                    console.log('=== TESTE 1: PERFIS COMPATÍVEIS ===');
+                    configManager.currentOtrsSystem = {
+                        name: 'Sistema Teste',
+                        userProfile: 'Nível 1'  // Usuário é Nível 1
+                    };
+                    
+                    // Simular fila "Técnico Remoto" (que é equivalente a Nível 1)
+                    const queueValidator = new window.HelpOTRS.QueueValidator(configManager, alertSystem);
+                    
+                    // Override da função para simular fila específica
+                    queueValidator.getCurrentQueue = () => 'Técnico Remoto';
+                    queueValidator.getCurrentQueueLevel = () => configManager.normalizeUserLevel('Técnico Remoto');
+                    
+                    console.log('Fila simulada:', queueValidator.getCurrentQueue());
+                    console.log('Nível da fila:', queueValidator.getCurrentQueueLevel());
+                    console.log('Perfil do usuário:', configManager.getUserProfile());
+                    console.log('São compatíveis?', configManager.compareUserLevels(queueValidator.getCurrentQueueLevel(), configManager.getUserProfile()));
+                    
+                    // Executar validação
+                    queueValidator.validateCurrentQueue();
+                    
+                    // Teste 2: Perfis INCOMPATÍVEIS - Técnico Local vs Técnico Remoto
+                    setTimeout(() => {
+                        console.log('=== TESTE 2: PERFIS INCOMPATÍVEIS ===');
+                        
+                        // Limpar alertas anteriores
+                        alertSystem.clearAll();
+                        
+                        configManager.currentOtrsSystem = {
+                            name: 'Sistema Teste',
+                            userProfile: 'Técnico Local'  // Usuário é Técnico Local (Nível 2)
+                        };
+                        
+                        const queueValidator2 = new window.HelpOTRS.QueueValidator(configManager, alertSystem);
+                        queueValidator2.getCurrentQueue = () => 'Técnico Remoto';
+                        queueValidator2.getCurrentQueueLevel = () => configManager.normalizeUserLevel('Técnico Remoto');
+                        
+                        console.log('Fila simulada:', queueValidator2.getCurrentQueue());
+                        console.log('Nível da fila:', queueValidator2.getCurrentQueueLevel());
+                        console.log('Perfil do usuário:', configManager.getUserProfile());
+                        console.log('São compatíveis?', configManager.compareUserLevels(queueValidator2.getCurrentQueueLevel(), configManager.getUserProfile()));
+                        
+                        queueValidator2.validateCurrentQueue();
+                    }, 3000);
+                    
+                    console.log('✅ Teste executado sem erros');
+                } catch (error) {
+                    console.error('❌ Erro no teste:', error);
+                    alert('Erro no teste: ' + error.message);
+                }
+            } else {
+                console.error('❌ HelpOTRS não está disponível');
+                alert('HelpOTRS não carregado corretamente');
+            }
+        }
+
+        function testCustomAlerts() {
+            if (window.HelpOTRS && window.HelpOTRS.AlertSystem) {
+                const alertSystem = new window.HelpOTRS.AlertSystem();
+                
+                // Teste 1: Alert de perfil e fila
+                alertSystem.showUserProfileAlert('Técnico Local', 'TI::Desenvolvimento');
+                
+                // Teste 2: Alert de tipo de atendimento (após 2 segundos)
+                setTimeout(() => {
+                    alertSystem.showServiceTypeQueueAlert('TI::Suporte', 'Presencial', 'Remoto');
+                }, 2000);
+            }
+        }
+
+        function testServiceTypeDetection() {
+            if (window.HelpOTRS && window.HelpOTRS.AlertSystem) {
+                const alertSystem = new window.HelpOTRS.AlertSystem();
+                
+                console.log('=== TESTE DE DETECÇÃO DE TIPO DE ATENDIMENTO ===');
+                
+                // Testar detecção atual
+                const currentServiceType = alertSystem.detectCurrentServiceType();
+                console.log('Tipo de atendimento detectado:', currentServiceType);
+                
+                if (currentServiceType) {
+                    alert(`Tipo de atendimento detectado: ${currentServiceType}`);
+                } else {
+                    alert('Nenhum tipo de atendimento detectado. Verifique se há campos de tipo de atendimento na página.');
+                }
+                
+                // Testar os seletores individualmente
+                const selectors = [
+                    'input[name*="ServiceType"]:checked',
+                    'select[name*="ServiceType"] option:selected',
+                    'input[name*="TipoAtendimento"]:checked',
+                    'select[name*="TipoAtendimento"] option:selected',
+                    'input[id*="DynamicField"][id*="Tipo"]:checked',
+                    'select[id*="DynamicField"][id*="Tipo"] option:selected'
+                ];
+                
+                selectors.forEach((selector, index) => {
+                    const element = document.querySelector(selector);
+                    console.log(`Seletor ${index + 1} (${selector}):`, element ? 'Encontrado' : 'Não encontrado');
+                    if (element) {
+                        console.log('  Valor:', element.value);
+                        console.log('  Texto:', element.textContent);
+                    }
+                });
+            }
+        }
+
+        function clearAlerts() {
+            const alerts = document.querySelectorAll('.help-otrs-alert');
+            alerts.forEach(alert => alert.remove());
+        }
+    </script>
+</body>
+</html>

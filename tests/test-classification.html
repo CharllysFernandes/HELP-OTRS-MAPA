@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - ClassificationValidator - Help OTRS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-field {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        select, input {
+            width: 100%;
+            max-width: 300px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .otrs-popup {
+            background: #f8f9fa;
+            border: 2px solid #007bff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .otrs-form {
+            background: white;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        /* Simulação de estilos OTRS */
+        .Popup.RealPopup {
+            background: white;
+        }
+        .WidgetSimple .Content {
+            background: #f9f9f9;
+            padding: 15px;
+        }
+        .Field {
+            margin: 10px 0;
+        }
+        .InputField_Container {
+            position: relative;
+        }
+        .InputField_Selection {
+            background: #e9ecef;
+            padding: 5px;
+            border: 1px solid #ced4da;
+            margin-bottom: 5px;
+            border-radius: 3px;
+        }
+        .Mandatory .Marker {
+            color: red;
+            font-weight: bold;
+        }
+        .Footer {
+            margin-top: 20px;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+        }
+        .Footer button {
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body class="Popup RealPopup">
+    <div class="container">
+        <h1>🧪 Teste - ClassificationValidator</h1>
+        
+        <div class="info">
+            <strong>📋 Simulação da Janela de Classificação OTRS</strong><br>
+            Esta página simula os elementos principais de uma janela de classificação do OTRS para testar o ClassificationValidator.
+        </div>
+
+        <!-- Simulação da janela de classificação -->
+        <div class="otrs-popup">
+            <h2>Adicionar nota para Chamado#55234547 — Manutenção Impressora</h2>
+            
+            <form name="compose" id="Compose" class="otrs-form">
+                <input type="hidden" name="Action" value="AgentTicketNote">
+                <input type="hidden" name="TicketID" value="234677">
+                
+                <div class="WidgetSimple">
+                    <div class="Header">
+                        <h3>Configurações de Chamado</h3>
+                    </div>
+                    <div class="Content">
+                        
+                        <!-- Campo Tipo -->
+                        <div class="Field">
+                            <label class="Mandatory" for="TypeID">
+                                <span class="Marker">*</span>Tipo:
+                            </label>
+                            <div class="InputField_Container">
+                                <div class="InputField_Selection">
+                                    <div class="Text">Requisição</div>
+                                </div>
+                                <select id="TypeID" name="TypeID" style="display: none;">
+                                    <option value="">-</option>
+                                    <option value="8">Incidente</option>
+                                    <option value="15" selected>Requisição</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Campo Serviço -->
+                        <div class="Field">
+                            <label class="Mandatory" for="ServiceID">
+                                <span class="Marker">*</span>Serviço:
+                            </label>
+                            <div class="InputField_Container">
+                                <div class="InputField_Selection">
+                                    <div class="Text">Instalar, Configurar ou Mapear Impressora ou Scanner</div>
+                                </div>
+                                <select id="ServiceID" name="ServiceID" style="display: none;">
+                                    <option value="">-</option>
+                                    <option value="2472" selected>Instalar, Configurar ou Mapear Impressora ou Scanner</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Campo Localidade -->
+                        <div class="Field">
+                            <label class="Mandatory" for="DynamicField_localidade">
+                                <span class="Marker">*</span>Localidade:
+                            </label>
+                            <div class="InputField_Container">
+                                <div class="InputField_Selection">
+                                    <div class="Text">DF - SEDE - Mapa</div>
+                                </div>
+                                <select id="DynamicField_localidade" name="DynamicField_localidade" style="display: none;">
+                                    <option value="">-</option>
+                                    <option value="DF - SEDE - Mapa" selected>DF - SEDE - Mapa</option>
+                                    <option value="SP - SFA - São Paulo">SP - SFA - São Paulo</option>
+                                    <option value="RJ - SFA - Rio de Janeiro">RJ - SFA - Rio de Janeiro</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Campo Tipo de Atendimento (PRINCIPAL PARA O TESTE) -->
+                        <div class="Field">
+                            <label class="Mandatory" for="DynamicField_PRITipoAtendimento">
+                                <span class="Marker">*</span>Tipo Atendimento:
+                            </label>
+                            <div class="InputField_Container">
+                                <div class="InputField_Selection">
+                                    <div class="Text">-</div>
+                                </div>
+                                <select id="DynamicField_PRITipoAtendimento" name="DynamicField_PRITipoAtendimento" style="display: block !important;">
+                                    <option value="-" selected>-</option>
+                                    <option value="P">Presencial</option>
+                                    <option value="R">Remoto</option>
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Footer com botões -->
+                <div class="Footer">
+                    <button type="button" id="submitRichText" class="Primary CallForAction">
+                        <span>✅ Enviar</span>
+                    </button>
+                    <button type="button">
+                        <span>📝 Salvar como rascunho</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Controles de Teste -->
+        <div class="test-section">
+            <h3>🔧 Controles de Teste</h3>
+            
+            <div class="form-field">
+                <label for="testServiceType">Simular Seleção de Tipo de Atendimento:</label>
+                <select id="testServiceType">
+                    <option value="-">- (Não Selecionado)</option>
+                    <option value="R">R (Remoto)</option>
+                    <option value="P">P (Presencial)</option>
+                </select>
+            </div>
+
+            <div class="form-field">
+                <button onclick="simulateServiceTypeChange()">🔄 Aplicar Mudança</button>
+                <button onclick="clearAlerts()">🗑️ Limpar Alertas</button>
+                <button onclick="showStats()">📊 Ver Estatísticas</button>
+                <button onclick="testDetection()">🔍 Testar Detecção</button>
+            </div>
+        </div>
+
+        <!-- Informações de Debug -->
+        <div class="test-section">
+            <h3>🐛 Debug Info</h3>
+            <div id="debugInfo">
+                <p><strong>Estado:</strong> <span id="debugStatus">Aguardando inicialização...</span></p>
+                <p><strong>Página Detectada:</strong> <span id="debugPageType">-</span></p>
+                <p><strong>Campo Encontrado:</strong> <span id="debugFieldFound">-</span></p>
+                <p><strong>Valor Atual:</strong> <span id="debugCurrentValue">-</span></p>
+            </div>
+        </div>
+
+        <!-- Área para Logs -->
+        <div class="test-section">
+            <h3>📝 Logs de Teste</h3>
+            <div id="testLogs" style="background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
+                <p>Aguardando inicialização dos módulos...</p>
+            </div>
+            <button onclick="clearLogs()" style="margin-top: 10px;">🗑️ Limpar Logs</button>
+        </div>
+    </div>
+
+    <!-- Scripts dos módulos Help OTRS -->
+    <script src="../src/core/AlertSystem.js"></script>
+    <script src="../src/modules/ClassificationValidator.js"></script>
+
+    <!-- Script de teste -->
+    <script>
+        // Variáveis globais para teste
+        let alertSystem = null;
+        let classificationValidator = null;
+        
+        // Log personalizado para o teste
+        function testLog(message, type = 'info') {
+            const logsDiv = document.getElementById('testLogs');
+            const timestamp = new Date().toLocaleTimeString();
+            const typeIcon = {
+                'info': 'ℹ️',
+                'success': '✅',
+                'warning': '⚠️',
+                'error': '❌',
+                'debug': '🐛'
+            }[type] || 'ℹ️';
+            
+            logsDiv.innerHTML += `<p>[${timestamp}] ${typeIcon} ${message}</p>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        // Interceptar console.log para capturar logs dos módulos
+        const originalLog = console.log;
+        console.log = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('Help OTRS')) {
+                testLog(message, 'debug');
+            }
+            originalLog.apply(console, args);
+        };
+
+        // Interceptar console.error
+        const originalError = console.error;
+        console.error = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('Help OTRS')) {
+                testLog(message, 'error');
+            }
+            originalError.apply(console, args);
+        };
+
+        // Função para inicializar teste
+        async function initializeTest() {
+            testLog('🚀 Iniciando teste do ClassificationValidator...', 'info');
+            
+            try {
+                // Aguardar módulos estarem disponíveis
+                if (!window.HelpOTRS || !window.HelpOTRS.AlertSystem || !window.HelpOTRS.ClassificationValidator) {
+                    testLog('⏳ Aguardando módulos...', 'warning');
+                    setTimeout(initializeTest, 100);
+                    return;
+                }
+                
+                // Inicializar AlertSystem
+                alertSystem = new window.HelpOTRS.AlertSystem();
+                testLog('✅ AlertSystem inicializado', 'success');
+                
+                // Inicializar ClassificationValidator
+                classificationValidator = new window.HelpOTRS.ClassificationValidator();
+                classificationValidator.init(alertSystem);
+                testLog('✅ ClassificationValidator inicializado', 'success');
+                
+                // Atualizar interface de debug
+                updateDebugInfo();
+                
+                testLog('🎉 Teste inicializado com sucesso!', 'success');
+                
+            } catch (error) {
+                testLog(`❌ Erro na inicialização: ${error.message}`, 'error');
+                console.error('Erro na inicialização do teste:', error);
+            }
+        }
+
+        // Atualizar informações de debug
+        function updateDebugInfo() {
+            try {
+                document.getElementById('debugStatus').textContent = classificationValidator ? 'Inicializado' : 'Não inicializado';
+                
+                if (classificationValidator) {
+                    const stats = classificationValidator.getStats();
+                    document.getElementById('debugPageType').textContent = stats.currentPageType?.isClassification ? 'Janela de Classificação' : 'Página Normal';
+                    
+                    const field = document.querySelector('#DynamicField_PRITipoAtendimento');
+                    document.getElementById('debugFieldFound').textContent = field ? `${field.tagName}#${field.id}` : 'Não encontrado';
+                    document.getElementById('debugCurrentValue').textContent = field ? (field.value || '-') : '-';
+                }
+                
+            } catch (error) {
+                testLog(`❌ Erro ao atualizar debug: ${error.message}`, 'error');
+            }
+        }
+
+        // Simular mudança no tipo de atendimento
+        function simulateServiceTypeChange() {
+            try {
+                const testSelect = document.getElementById('testServiceType');
+                const targetField = document.querySelector('#DynamicField_PRITipoAtendimento');
+                
+                if (!targetField) {
+                    testLog('❌ Campo de tipo de atendimento não encontrado', 'error');
+                    return;
+                }
+                
+                const newValue = testSelect.value;
+                targetField.value = newValue;
+                
+                // Disparar evento de mudança
+                const changeEvent = new Event('change', { bubbles: true });
+                targetField.dispatchEvent(changeEvent);
+                
+                testLog(`🔄 Valor alterado para: ${newValue}`, 'info');
+                updateDebugInfo();
+                
+            } catch (error) {
+                testLog(`❌ Erro ao simular mudança: ${error.message}`, 'error');
+            }
+        }
+
+        // Limpar alertas
+        function clearAlerts() {
+            try {
+                if (alertSystem) {
+                    alertSystem.clearAll();
+                    testLog('🗑️ Alertas limpos', 'info');
+                } else {
+                    testLog('⚠️ AlertSystem não inicializado', 'warning');
+                }
+            } catch (error) {
+                testLog(`❌ Erro ao limpar alertas: ${error.message}`, 'error');
+            }
+        }
+
+        // Mostrar estatísticas
+        function showStats() {
+            try {
+                if (classificationValidator) {
+                    const stats = classificationValidator.getStats();
+                    testLog(`📊 Stats: ${JSON.stringify(stats, null, 2)}`, 'info');
+                }
+                
+                if (alertSystem) {
+                    const alertStats = alertSystem.getStats();
+                    testLog(`📊 Alert Stats: ${JSON.stringify(alertStats, null, 2)}`, 'info');
+                }
+                
+            } catch (error) {
+                testLog(`❌ Erro ao obter estatísticas: ${error.message}`, 'error');
+            }
+        }
+
+        // Testar detecção
+        function testDetection() {
+            try {
+                if (classificationValidator) {
+                    testLog('🔍 Testando detecção de página...', 'info');
+                    const isClassification = classificationValidator.isClassificationWindow();
+                    testLog(`🎯 Resultado: ${isClassification ? 'Janela de Classificação detectada' : 'Não é janela de classificação'}`, isClassification ? 'success' : 'warning');
+                    
+                    // Testar detecção de campo
+                    const field = classificationValidator.findServiceTypeField();
+                    testLog(`🔍 Campo detectado: ${field ? field.id || field.name : 'Nenhum'}`, field ? 'success' : 'warning');
+                } else {
+                    testLog('⚠️ ClassificationValidator não inicializado', 'warning');
+                }
+            } catch (error) {
+                testLog(`❌ Erro no teste de detecção: ${error.message}`, 'error');
+            }
+        }
+
+        // Limpar logs
+        function clearLogs() {
+            document.getElementById('testLogs').innerHTML = '<p>Logs limpos...</p>';
+        }
+
+        // Inicializar quando a página carregar
+        window.addEventListener('load', () => {
+            testLog('📄 Página carregada, iniciando teste...', 'info');
+            setTimeout(initializeTest, 500);
+        });
+
+        // Atualizar debug a cada 2 segundos
+        setInterval(updateDebugInfo, 2000);
+    </script>
+</body>
+</html>
