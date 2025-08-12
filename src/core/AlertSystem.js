@@ -39,31 +39,6 @@
         }
 
         /**
-         * Sanitizar conteúdo HTML para prevenir XSS
-         * @param {string} html - Conteúdo HTML
-         * @returns {string} HTML sanitizado
-         */
-        sanitizeHtml(html) {
-            if (!html) return '';
-            
-            // Criar elemento temporário para sanitização
-            const temp = document.createElement('div');
-            temp.textContent = html;
-            
-            // Permitir apenas algumas tags seguras
-            const allowedTags = ['strong', 'b', 'em', 'i', 'br', 'span'];
-            let sanitized = temp.innerHTML;
-            
-            // Permitir tags específicas (implementação básica)
-            allowedTags.forEach(tag => {
-                const regex = new RegExp(`&lt;(/?${tag}(?:\\s[^&gt;]*)?)&gt;`, 'gi');
-                sanitized = sanitized.replace(regex, '<$1>');
-            });
-            
-            return sanitized;
-        }
-
-        /**
          * Obter estilos CSS para os alertas
          * @returns {string}
          */
@@ -172,7 +147,7 @@
         }
 
         /**
-         * Criar elemento de alerta com sanitização
+         * Criar elemento de alerta usando JavaScript puro (sem HTML)
          * @param {string} id 
          * @param {string} type 
          * @param {string} title 
@@ -186,30 +161,105 @@
                 alert.id = id;
                 alert.className = `help-otrs-alert help-otrs-alert-${type}`;
                 
-                let html = '';
+                // Criar elemento de título se fornecido
                 if (title) {
-                    html += `<div class="help-otrs-alert-title">${this.sanitizeHtml(title)}</div>`;
-                }
-                html += `<div class="help-otrs-alert-message">${this.sanitizeHtml(message)}</div>`;
-                
-                if (closeable) {
-                    html += `<button class="help-otrs-alert-close" type="button" data-alert-id="${id}">&times;</button>`;
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'help-otrs-alert-title';
+                    titleDiv.textContent = title; // Seguro contra XSS
+                    alert.appendChild(titleDiv);
                 }
                 
-                alert.innerHTML = html;
+                // Criar elemento de mensagem
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'help-otrs-alert-message';
+                messageDiv.textContent = message; // Seguro contra XSS
+                alert.appendChild(messageDiv);
                 
-                // Adicionar event listener seguro para o botão close
+                // Criar botão de fechar se necessário
                 if (closeable) {
-                    const closeBtn = alert.querySelector('.help-otrs-alert-close');
-                    if (closeBtn) {
-                        closeBtn.addEventListener('click', () => this.remove(id));
-                    }
+                    const closeBtn = document.createElement('button');
+                    closeBtn.className = 'help-otrs-alert-close';
+                    closeBtn.type = 'button';
+                    closeBtn.textContent = '×';
+                    closeBtn.setAttribute('data-alert-id', id);
+                    
+                    // Event listener seguro
+                    closeBtn.addEventListener('click', () => this.remove(id));
+                    alert.appendChild(closeBtn);
                 }
                 
                 return alert;
             } catch (error) {
                 console.error('Help OTRS: Erro ao criar elemento de alerta:', error);
                 throw new Error(`Falha ao criar alerta: ${error.message}`);
+            }
+        }
+
+        /**
+         * Criar elemento de alerta com formatação avançada usando DOM puro
+         * @param {string} id 
+         * @param {string} type 
+         * @param {string} title 
+         * @param {Object} messageData - Objeto com texto e partes destacadas
+         * @param {boolean} closeable 
+         * @returns {HTMLElement}
+         */
+        createFormattedAlertElement(id, type, title, messageData, closeable = true) {
+            try {
+                const alert = document.createElement('div');
+                alert.id = id;
+                alert.className = `help-otrs-alert help-otrs-alert-${type}`;
+                
+                // Criar elemento de título se fornecido
+                if (title) {
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'help-otrs-alert-title';
+                    titleDiv.textContent = title;
+                    alert.appendChild(titleDiv);
+                }
+                
+                // Criar elemento de mensagem com formatação
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'help-otrs-alert-message';
+                
+                if (typeof messageData === 'string') {
+                    messageDiv.textContent = messageData;
+                } else if (messageData.parts) {
+                    // Suporte para partes formatadas
+                    messageData.parts.forEach(part => {
+                        if (part.type === 'text') {
+                            const textNode = document.createTextNode(part.content);
+                            messageDiv.appendChild(textNode);
+                        } else if (part.type === 'strong') {
+                            const strong = document.createElement('strong');
+                            strong.textContent = part.content;
+                            messageDiv.appendChild(strong);
+                        } else if (part.type === 'break') {
+                            messageDiv.appendChild(document.createElement('br'));
+                        }
+                    });
+                } else {
+                    messageDiv.textContent = messageData.text || '';
+                }
+                
+                alert.appendChild(messageDiv);
+                
+                // Criar botão de fechar se necessário
+                if (closeable) {
+                    const closeBtn = document.createElement('button');
+                    closeBtn.className = 'help-otrs-alert-close';
+                    closeBtn.type = 'button';
+                    closeBtn.textContent = '×';
+                    closeBtn.setAttribute('data-alert-id', id);
+                    
+                    closeBtn.addEventListener('click', () => this.remove(id));
+                    alert.appendChild(closeBtn);
+                }
+                
+                return alert;
+            } catch (error) {
+                console.error('Help OTRS: Erro ao criar elemento formatado:', error);
+                throw new Error(`Falha ao criar alerta formatado: ${error.message}`);
             }
         }
 
@@ -285,6 +335,61 @@
             }
             
             return false;
+        }
+
+        /**
+         * Encontrar e inserir alerta ao lado do campo de fila
+         * @param {HTMLElement} alert 
+         * @returns {boolean}
+         */
+        insertAlertBesideQueueField(alert) {
+            try {
+                // Procurar pelo campo de fila específico
+                const queueSelect = document.querySelector('#Dest, select[name="Dest"]');
+                if (!queueSelect) {
+                    console.log('Help OTRS: Campo de fila não encontrado');
+                    return false;
+                }
+                
+                // Encontrar o container do campo (.Field)
+                const fieldContainer = queueSelect.closest('.Field');
+                if (!fieldContainer) {
+                    console.log('Help OTRS: Container do campo de fila não encontrado');
+                    return false;
+                }
+                
+                // Criar container para o alerta ao lado do campo
+                let alertSideContainer = fieldContainer.querySelector('.help-otrs-queue-alert-container');
+                
+                if (!alertSideContainer) {
+                    alertSideContainer = document.createElement('div');
+                    alertSideContainer.className = 'help-otrs-queue-alert-container';
+                    alertSideContainer.style.cssText = `
+                        margin-top: 5px;
+                        margin-bottom: 10px;
+                        position: relative;
+                    `;
+                    
+                    // Inserir logo após o campo, mas antes das mensagens de erro
+                    const errorDiv = fieldContainer.querySelector('#DestError, #DestServerError');
+                    if (errorDiv) {
+                        fieldContainer.insertBefore(alertSideContainer, errorDiv);
+                    } else {
+                        fieldContainer.appendChild(alertSideContainer);
+                    }
+                }
+                
+                // Limpar container e inserir novo alerta
+                alertSideContainer.innerHTML = '';
+                alertSideContainer.appendChild(alert);
+                
+                console.log('Help OTRS: Alert inserido ao lado do campo de fila');
+                return true;
+                
+            } catch (error) {
+                console.error('Help OTRS: Erro ao inserir alert ao lado da fila:', error);
+                return false;
+            }
         }
 
         /**
@@ -424,7 +529,15 @@
                     
                     // Remover do DOM se ainda estiver presente
                     if (alert.parentElement) {
+                        const container = alert.parentElement;
                         alert.remove();
+                        
+                        // Limpar container específico se vazio e for nosso container
+                        if (container.classList.contains('help-otrs-queue-alert-container') && 
+                            container.children.length === 0) {
+                            container.remove();
+                            console.log(`Help OTRS: Container vazio removido para ${id}`);
+                        }
                     }
                     
                     // Remover da Map
@@ -507,7 +620,7 @@
         // Métodos específicos para validações (compatibilidade com código existente)
 
         /**
-         * Mostrar aviso de fila
+         * Mostrar aviso de fila com formatação
          * @param {string} id 
          * @param {string} message 
          * @param {string} queue 
@@ -515,9 +628,41 @@
          */
         showQueueWarning(id, message, queue, userProfile) {
             const title = '⚠️ Aviso de Fila';
-            const fullMessage = `${message}<br><br><strong>Fila:</strong> ${queue}<br><strong>Perfil:</strong> ${userProfile}`;
-            // Alerta de validação de fila - deve permanecer visível
-            this.showWarning(id, title, fullMessage, { autoRemove: 0 });
+            const messageData = {
+                parts: [
+                    { type: 'text', content: message },
+                    { type: 'break' },
+                    { type: 'break' },
+                    { type: 'strong', content: 'Fila: ' },
+                    { type: 'text', content: queue },
+                    { type: 'break' },
+                    { type: 'strong', content: 'Perfil: ' },
+                    { type: 'text', content: userProfile }
+                ]
+            };
+            
+            // Remover alerta existente
+            this.remove(id);
+            
+            // Injetar estilos e criar elemento formatado
+            this.injectStyles();
+            const alert = this.createFormattedAlertElement(id, 'warning', title, messageData, true);
+            
+            // Inserir no DOM
+            let inserted = this.insertAlertAboveButton(alert);
+            if (!inserted) {
+                const container = this.findAlertContainer();
+                if (container) {
+                    container.insertBefore(alert, container.firstChild);
+                    inserted = true;
+                }
+            }
+            
+            if (inserted) {
+                this.alerts.set(id, alert);
+                this.observeAlertRemoval(id, alert);
+                console.log(`Help OTRS Alert [warning]: ${title} - ${message}`);
+            }
         }
 
         /**
@@ -562,28 +707,73 @@
         }
 
         /**
-         * Mostrar alerta de perfil e fila do usuário
+         * Verificar se uma fila está preenchida e é válida
+         * @param {string} queue - Nome/valor da fila
+         * @returns {boolean}
+         */
+        isValidQueue(queue) {
+            if (!queue || typeof queue !== 'string') {
+                return false;
+            }
+            
+            const trimmedQueue = queue.trim();
+            const invalidValues = ['', '-', 'undefined', 'null', '0'];
+            
+            return !invalidValues.includes(trimmedQueue.toLowerCase());
+        }
+
+        /**
+         * Mostrar alerta de perfil e fila do usuário ao lado do campo de fila
          * @param {string} userProfile 
          * @param {string} queue 
          */
         showUserProfileAlert(userProfile, queue) {
+            // Verificar se a fila está preenchida e é válida
+            if (!this.isValidQueue(queue)) {
+                console.log('Help OTRS: Fila não preenchida ou inválida, não exibindo alerta de perfil');
+                return;
+            }
+            
             const id = 'user-profile-alert';
-            const message = `Seu perfil é <strong>${userProfile}</strong> e você está abrindo chamado para a fila <strong>${queue}</strong>.`;
-            // Alerta persistente - não deve ser removido automaticamente
-            this.showInfo(id, '', message, { aboveButton: true, autoRemove: 0 });
-        }
-
-        /**
-         * Mostrar alerta de tipo de atendimento e fila
-         * @param {string} selectedQueue 
-         * @param {string} currentServiceType 
-         * @param {string} correctServiceType 
-         */
-        showServiceTypeQueueAlert(selectedQueue, currentServiceType, correctServiceType) {
-            const id = 'service-type-queue-alert';
-            const message = `A fila selecionada é <strong>${selectedQueue}</strong> e o tipo de atendimento está marcado como <strong>${currentServiceType}</strong>. O correto deveria ser <strong>${correctServiceType}</strong>.`;
-            // Alerta de validação importante - deve permanecer visível
-            this.showWarning(id, '⚠️ Verificação de Tipo de Atendimento', message, { aboveButton: true, autoRemove: 0 });
+            const messageData = {
+                parts: [
+                    { type: 'text', content: 'Seu perfil é ' },
+                    { type: 'strong', content: userProfile },
+                    { type: 'text', content: ' e você está abrindo chamado para a fila ' },
+                    { type: 'strong', content: queue },
+                    { type: 'text', content: '.' }
+                ]
+            };
+            
+            // Remover alerta existente
+            this.remove(id);
+            
+            // Injetar estilos e criar elemento formatado
+            this.injectStyles();
+            const alert = this.createFormattedAlertElement(id, 'info', '', messageData, true);
+            
+            // Tentar inserir ao lado do campo de fila primeiro
+            let inserted = this.insertAlertBesideQueueField(alert);
+            
+            // Fallback: inserir acima do botão se não conseguir ao lado da fila
+            if (!inserted) {
+                inserted = this.insertAlertAboveButton(alert);
+            }
+            
+            // Fallback final: container padrão
+            if (!inserted) {
+                const container = this.findAlertContainer();
+                if (container) {
+                    container.insertBefore(alert, container.firstChild);
+                    inserted = true;
+                }
+            }
+            
+            if (inserted) {
+                this.alerts.set(id, alert);
+                this.observeAlertRemoval(id, alert);
+                console.log(`Help OTRS Alert [info]: User Profile - ${userProfile} -> ${queue} (lado da fila)`);
+            }
         }
 
         /**
@@ -595,34 +785,14 @@
             const userProfile = configManager.getUserProfile();
             const currentQueue = queueValidator.getCurrentQueue();
             
-            if (userProfile && currentQueue) {
+            // Validar se perfil existe e fila está preenchida e válida
+            if (userProfile && userProfile.trim() !== '' && this.isValidQueue(currentQueue)) {
                 // Mostrar alerta de perfil e fila
                 this.showUserProfileAlert(userProfile, currentQueue);
-                
-                // Determinar tipo de atendimento correto baseado na fila
-                const isRemoteQueue = queueValidator.isRemoteTechnicianQueue();
-                const isLocalQueue = queueValidator.isLocalTechnicianQueue();
-                
-                let correctServiceType = '';
-                let currentServiceType = this.detectCurrentServiceType();
-                
-                if (isRemoteQueue) {
-                    correctServiceType = 'Remoto';
-                } else if (isLocalQueue) {
-                    correctServiceType = 'Presencial';
-                } else {
-                    // Determinar baseado no nome da fila
-                    if (currentQueue.toLowerCase().includes('remoto') || currentQueue.toLowerCase().includes('nível 1')) {
-                        correctServiceType = 'Remoto';
-                    } else {
-                        correctServiceType = 'Presencial';
-                    }
-                }
-                
-                // Mostrar alerta de tipo de atendimento se necessário
-                if (currentServiceType && correctServiceType && currentServiceType !== correctServiceType) {
-                    this.showServiceTypeQueueAlert(currentQueue, currentServiceType, correctServiceType);
-                }
+            } else {
+                // Remover alerta se fila não estiver preenchida
+                this.remove('user-profile-alert');
+                console.log('Help OTRS: Fila não selecionada ou inválida, alerta de perfil removido');
             }
         }
 
