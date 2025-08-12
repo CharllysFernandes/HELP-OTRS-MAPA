@@ -1,0 +1,14 @@
+{
+  "tag_name": "v1.0.1",
+  "name": "Help OTRS v1.0.1",
+  "body": "## 🚀 Help OTRS v1.0.1\n\nPrimeira Release Oficial - Versão release\n\n### 📦 Arquivos do Release\n\n- **help-otrs-v1.0.1.zip** (99.24 KB)\n  - Extensão completa pronta para instalação\n  - 19 arquivos incluídos\n  - Compressão: 77.8%\n\n### 📥 Como Instalar\n\n1. Baixe o arquivo `help-otrs-v1.0.1.zip`\n2. Extraia o conteúdo em uma pasta\n3. Abra Chrome → Extensões → Modo do desenvolvedor\n4. Clique em \"Carregar extensão descompactada\"\n5. Selecione a pasta extraída\n\n### 🔧 Alterações\n\n\n## [1.0.1] - 2025-08-12\n\n### 🚀 Primeira Release Oficial\n\nEsta é a primeira versão estável da extensão Help OTRS - MAPA, marcando o início do versionamento semântico oficial.\n\n### ✨ Funcionalidades Principais\n\n- Sistema de validação de filas e tipos de atendimento\n- Alertas de classificação em tempo real\n- Reaproveitamento de dados de formulários\n- Sistema modular de configuração\n- Build automático com Python\n\n### 📊 Compatibilidade\n- Chrome Extensions Manifest V3\n- MAPA, SFB, MT e outros sistemas OTRS\n\n\n### 📊 Estatísticas\n\n- **Versão anterior**: 1.0.1\n- **Arquivos**: 19 \n- **Tamanho total**: 447.90 KB\n- **Tamanho comprimido**: 99.24 KB\n- **Data de build**: 2025-08-12\n\n---\n*Build automático gerado em 2025-08-12 14:27:06*",
+  "draft": false,
+  "prerelease": false,
+  "assets": [
+    {
+      "name": "help-otrs-v1.0.1.zip",
+      "path": "C:\\Users\\charllys.luz.HEPTA\\Downloads\\Github\\HELP-OTRS-MAPA\\help-otrs-v1.0.1.zip",
+      "content_type": "application/zip"
+    }
+  ]
+}

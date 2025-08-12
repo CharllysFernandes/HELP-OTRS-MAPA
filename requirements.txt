@@ -1,0 +1,18 @@
+# Dependências Python para Help OTRS
+# Instalar com: pip install -r requirements.txt
+
+# Sistema de releases GitHub
+requests>=2.32.0
+
+# Processamento de arquivos (built-in, não necessário instalar)
+# json
+# zipfile
+# pathlib
+# datetime
+
+# Futuras dependências opcionais (comentadas)
+# colorama>=0.4.6  # Cores no terminal (Windows)
+# click>=8.0.0     # Interface CLI avançada
+# pyyaml>=6.0      # Configurações YAML
+# semver>=3.0.0    # Validação semantic versioning
+# gitpython>=3.1.0 # Integração Git avançada
