@@ -1,325 +1,727 @@
 /**
  * QueueValidator - Validação de Filas
+ * Versão otimizada com cache DOM, benchmarks e tratamento de erros
  * 
  * Responsável por validar se a fila selecionada é compatível
  * com o tipo de atendimento escolhido.
  * 
  * @author Help OTRS Team
- * @version 2.2.0
+ * @version 2.3.0
  */
 
 (function(global) {
     'use strict';
 
     class QueueValidator {
-    constructor(configManager, alertSystem) {
-        this.configManager = configManager;
-        this.alertSystem = alertSystem;
-    }
+        constructor(configManager, alertSystem) {
+            this.configManager = configManager;
+            this.alertSystem = alertSystem;
+            this.domCache = new Map();
+            this.performanceMetrics = new Map();
+            this.isEnabled = true;
+            this.validateDependencies();
+        }
 
-    /**
-     * Verificar se é página de nota de ticket
-     * @returns {boolean}
-     */
-    isTicketNotePage() {
-        return document.URL.includes("AgentTicketNote");
-    }
-
-    /**
-     * Verificar se é página de criação de ticket
-     * @returns {boolean}
-     */
-    isTicketCreationPage() {
-        return document.URL.includes("AgentTicketPhone");
-    }
-
-    /**
-     * Verificar se é fila de técnico remoto/Nível 1
-     * @returns {boolean}
-     */
-    isRemoteTechnicianQueue() {
-        // Verificar se a fila selecionada é "Técnico Remoto" ou variações de Nível 1
-        const destSelection = document.querySelector("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text");
-        if (destSelection) {
-            const queueText = destSelection.textContent.trim();
-            console.log('Help OTRS: Verificando fila para Técnico Remoto/Nível 1:', queueText);
-            
-            // Normalizar o nível da fila usando o ConfigManager
-            const normalizedLevel = this.configManager.normalizeUserLevel(queueText);
-            console.log('Help OTRS: Nível normalizado:', normalizedLevel);
-            
-            return normalizedLevel === "Nível 1";
-        }
-        
-        // Fallback: verificar no select oculto
-        const destSelect = document.querySelector("#Dest");
-        if (destSelect && destSelect.selectedOptions.length > 0) {
-            const selectedOption = destSelect.selectedOptions[0];
-            const queueText = selectedOption.textContent.trim();
-            console.log('Help OTRS: Verificando fila (select) para Técnico Remoto/Nível 1:', queueText);
-            
-            // Normalizar o nível da fila usando o ConfigManager
-            const normalizedLevel = this.configManager.normalizeUserLevel(queueText);
-            console.log('Help OTRS: Nível normalizado (select):', normalizedLevel);
-            
-            return normalizedLevel === "Nível 1";
-        }
-        
-        return false;
-    }
-
-    /**
-     * Verificar se é fila de técnico local
-     * @returns {boolean}
-     */
-    isLocalTechnicianQueue() {
-        // Verificar se a fila selecionada é "Técnico Local"
-        const destSelection = document.querySelector("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text");
-        if (destSelection) {
-            const queueText = destSelection.textContent.trim();
-            console.log('Help OTRS: Verificando fila para Técnico Local:', queueText);
-            return queueText === "Técnico Local" || queueText === "Tecnico Local";
-        }
-        
-        // Fallback: verificar no select oculto
-        const destSelect = document.querySelector("#Dest");
-        if (destSelect && destSelect.selectedOptions.length > 0) {
-            const selectedOption = destSelect.selectedOptions[0];
-            const queueText = selectedOption.textContent.trim();
-            console.log('Help OTRS: Verificando fila (select) para Técnico Local:', queueText);
-            return queueText.includes("Técnico Local") || queueText.includes("Tecnico Local");
-        }
-        
-        return false;
-    }
-
-    /**
-     * Obter fila atual selecionada
-     * @returns {string|null}
-     */
-    getCurrentQueue() {
-        // Método 1: Verificar elemento de seleção visível (mais comum no OTRS moderno)
-        const destSelection = document.querySelector("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text");
-        if (destSelection && destSelection.textContent.trim()) {
-            const queueText = destSelection.textContent.trim();
-            console.log('Help OTRS: Fila detectada (método 1):', queueText);
-            return queueText;
-        }
-        
-        // Método 2: Verificar no select oculto
-        const destSelect = document.querySelector("#Dest");
-        if (destSelect && destSelect.selectedOptions.length > 0) {
-            const queueText = destSelect.selectedOptions[0].textContent.trim();
-            console.log('Help OTRS: Fila detectada (método 2):', queueText);
-            return queueText;
-        }
-        
-        // Método 3: Verificar campo de input diretamente
-        const destInput = document.querySelector("#Dest_Search");
-        if (destInput && destInput.value.trim()) {
-            const queueText = destInput.value.trim();
-            console.log('Help OTRS: Fila detectada (método 3):', queueText);
-            return queueText;
-        }
-        
-        // Método 4: Verificar por outros seletores comuns
-        const alternatives = [
-            'select[name="Dest"] option:checked',
-            '#DestQueueID option:checked',
-            '.QueueID option:checked'
-        ];
-        
-        for (const selector of alternatives) {
-            const element = document.querySelector(selector);
-            if (element && element.textContent.trim()) {
-                const queueText = element.textContent.trim();
-                console.log('Help OTRS: Fila detectada (método alternativo):', queueText);
-                return queueText;
+        /**
+         * Validar dependências obrigatórias
+         * @throws {Error} Se dependências não estiverem disponíveis
+         */
+        validateDependencies() {
+            if (!this.configManager) {
+                throw new Error('ConfigManager é obrigatório para QueueValidator');
+            }
+            if (!this.alertSystem) {
+                console.warn('AlertSystem não fornecido - alertas não serão exibidos');
             }
         }
-        
-        console.log('Help OTRS: Nenhuma fila detectada');
-        return null;
-    }
 
-    /**
-     * Obter nível normalizado da fila atual
-     * @returns {string|null}
-     */
-    getCurrentQueueLevel() {
-        const queue = this.getCurrentQueue();
-        if (queue) {
-            return this.configManager.normalizeUserLevel(queue);
+        /**
+         * Cache DOM inteligente com timeout
+         * @param {string} selector - Seletor CSS
+         * @param {number} timeout - Timeout do cache em ms (padrão: 3000)
+         * @returns {HTMLElement|null} Elemento encontrado ou null
+         */
+        getCachedElement(selector, timeout = 3000) {
+            try {
+                const cacheKey = `dom_${selector}`;
+                
+                // Verificar cache existente
+                if (this.domCache.has(cacheKey)) {
+                    const cached = this.domCache.get(cacheKey);
+                    if (Date.now() - cached.timestamp < timeout) {
+                        // Validar se elemento ainda está no DOM
+                        if (cached.element && document.contains(cached.element)) {
+                            return cached.element;
+                        }
+                    }
+                    // Cache expirado ou elemento removido
+                    this.domCache.delete(cacheKey);
+                }
+                
+                // Buscar elemento
+                const element = document.querySelector(selector);
+                
+                // Armazenar no cache
+                this.domCache.set(cacheKey, {
+                    element,
+                    timestamp: Date.now(),
+                    selector
+                });
+                
+                return element;
+            } catch (error) {
+                this.log('error', `Erro ao obter elemento ${selector}`, error);
+                return null;
+            }
         }
-        return null;
+
+        /**
+         * Obter elementos DOM frequentemente usados com cache
+         * @returns {Object} Objeto com elementos DOM principais
+         */
+        getDOMElements() {
+            try {
+                return {
+                    destSearch: this.getCachedElement("#Dest_Search"),
+                    destSelection: this.getCachedElement("#Dest_Search")?.parentElement?.querySelector(".InputField_Selection .Text"),
+                    destSelect: this.getCachedElement("#Dest"),
+                    serviceSearch: this.getCachedElement("#ServiceID_Search"),
+                    coreElement: this.getCachedElement("#Core_UI_AutogeneratedID_1")
+                };
+            } catch (error) {
+                this.log('error', 'Erro ao obter elementos DOM', error);
+                return {};
+            }
+        }
+
+        /**
+         * Limpar cache DOM seletivamente
+         * @param {string} pattern - Padrão regex opcional para limpeza seletiva
+         */
+        clearDOMCache(pattern = null) {
+            try {
+                if (!pattern) {
+                    const size = this.domCache.size;
+                    this.domCache.clear();
+                    this.log('info', `Cache DOM limpo completamente - ${size} entradas removidas`);
+                    return;
+                }
+                
+                const regex = new RegExp(pattern);
+                let removed = 0;
+                for (const key of this.domCache.keys()) {
+                    if (regex.test(key)) {
+                        this.domCache.delete(key);
+                        removed++;
+                    }
+                }
+                this.log('info', `Cache DOM limpo seletivamente - ${removed} entradas removidas`);
+            } catch (error) {
+                this.log('error', 'Erro ao limpar cache DOM', error);
+            }
+        }
+
+        /**
+         * Sistema de benchmark para medir performance
+         * @param {string} name - Nome da operação
+         * @param {Function} operation - Função a ser executada
+         * @returns {*} Resultado da operação
+         */
+        async benchmark(name, operation) {
+            if (!this.isEnabled) {
+                return await operation();
+            }
+            
+            const startTime = performance.now();
+            const startMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+            
+            try {
+                const result = await operation();
+                
+                const endTime = performance.now();
+                const endMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                const duration = endTime - startTime;
+                const memoryDelta = endMemory - startMemory;
+                
+                this.performanceMetrics.set(name, {
+                    duration,
+                    memoryDelta,
+                    timestamp: new Date().toISOString(),
+                    success: true
+                });
+                
+                this.log('info', `Benchmark ${name}: ${duration.toFixed(2)}ms, Memória: ${(memoryDelta / 1024).toFixed(2)}KB`);
+                
+                return result;
+            } catch (error) {
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                
+                this.performanceMetrics.set(name, {
+                    duration,
+                    timestamp: new Date().toISOString(),
+                    success: false,
+                    error: error.message
+                });
+                
+                this.log('error', `Benchmark ${name} falhou após ${duration.toFixed(2)}ms`, error);
+                throw error;
+            }
+        }
+
+        /**
+         * Obter métricas de performance
+         * @returns {Object} Métricas coletadas
+         */
+        getPerformanceMetrics() {
+            const metrics = {};
+            for (const [name, data] of this.performanceMetrics.entries()) {
+                metrics[name] = data;
+            }
+            return metrics;
+        }
+
+        /**
+         * Log estruturado para debug - Versão melhorada
+         * @param {string} level - Nível do log (info, warn, error)
+         * @param {string} message - Mensagem
+         * @param {Object} data - Dados adicionais
+         */
+        log(level, message, data = null) {
+            if (!this.isEnabled && level !== 'error') return;
+
+            const timestamp = new Date().toISOString();
+            const logMessage = `[${timestamp}] Help OTRS QueueValidator: ${message}`;
+            
+            try {
+                switch (level.toLowerCase()) {
+                    case 'error':
+                        console.error(logMessage, data);
+                        break;
+                    case 'warn':
+                        console.warn(logMessage, data);
+                        break;
+                    case 'info':
+                    default:
+                        console.log(logMessage, data);
+                        break;
+                }
+            } catch (error) {
+                try {
+                    console.log(`QueueValidator Log Error: ${error.message}`);
+                } catch (e) {
+                    // Silenciar se console totalmente indisponível
+                }
+            }
+        }
+
+        /**
+         * Verificar se é página de nota de ticket - Versão otimizada
+         * @returns {boolean}
+         */
+        isTicketNotePage() {
+            try {
+                return document.URL.includes("AgentTicketNote");
+            } catch (error) {
+                this.log('error', 'Erro ao verificar página de nota', error);
+                return false;
+            }
+        }
+
+        /**
+         * Verificar se é página de criação de ticket - Versão otimizada
+         * @returns {boolean}
+         */
+        isTicketCreationPage() {
+            try {
+                return document.URL.includes("AgentTicketPhone");
+            } catch (error) {
+                this.log('error', 'Erro ao verificar página de criação', error);
+                return false;
+            }
+        }
+
+        /**
+         * Verificar se é fila de técnico remoto/Nível 1 - Versão otimizada
+         * @returns {boolean}
+         */
+        isRemoteTechnicianQueue() {
+            try {
+                const elements = this.getDOMElements();
+                
+                // Método 1: Verificar elemento de seleção visível
+                if (elements.destSelection) {
+                    const queueText = elements.destSelection.textContent.trim();
+                    this.log('info', `Verificando fila para Técnico Remoto/Nível 1: ${queueText}`);
+                    
+                    // Normalizar o nível da fila usando o ConfigManager
+                    const normalizedLevel = this.configManager.normalizeUserLevel(queueText);
+                    this.log('info', `Nível normalizado: ${normalizedLevel}`);
+                    
+                    return normalizedLevel === "Nível 1";
+                }
+                
+                // Método 2: Fallback - verificar no select oculto
+                if (elements.destSelect && elements.destSelect.selectedOptions.length > 0) {
+                    const selectedOption = elements.destSelect.selectedOptions[0];
+                    const queueText = selectedOption.textContent.trim();
+                    this.log('info', `Verificando fila (select) para Técnico Remoto/Nível 1: ${queueText}`);
+                    
+                    // Normalizar o nível da fila usando o ConfigManager
+                    const normalizedLevel = this.configManager.normalizeUserLevel(queueText);
+                    this.log('info', `Nível normalizado (select): ${normalizedLevel}`);
+                    
+                    return normalizedLevel === "Nível 1";
+                }
+                
+                return false;
+            } catch (error) {
+                this.log('error', 'Erro ao verificar fila de técnico remoto', error);
+                return false;
+            }
+        }
+
+        /**
+         * Verificar se é fila de técnico local - Versão otimizada
+         * @returns {boolean}
+         */
+        isLocalTechnicianQueue() {
+            try {
+                const elements = this.getDOMElements();
+                
+                // Método 1: Verificar elemento de seleção visível
+                if (elements.destSelection) {
+                    const queueText = elements.destSelection.textContent.trim();
+                    this.log('info', `Verificando fila para Técnico Local: ${queueText}`);
+                    return queueText === "Técnico Local" || queueText === "Tecnico Local";
+                }
+                
+                // Método 2: Fallback - verificar no select oculto
+                if (elements.destSelect && elements.destSelect.selectedOptions.length > 0) {
+                    const selectedOption = elements.destSelect.selectedOptions[0];
+                    const queueText = selectedOption.textContent.trim();
+                    this.log('info', `Verificando fila (select) para Técnico Local: ${queueText}`);
+                    return queueText.includes("Técnico Local") || queueText.includes("Tecnico Local");
+                }
+                
+                return false;
+            } catch (error) {
+                this.log('error', 'Erro ao verificar fila de técnico local', error);
+                return false;
+            }
+        }
+
+        /**
+         * Obter fila atual selecionada - Versão otimizada com cache
+         * @returns {string|null}
+         */
+        getCurrentQueue() {
+            try {
+                const elements = this.getDOMElements();
+                
+                // Método 1: Verificar elemento de seleção visível (mais comum no OTRS moderno)
+                if (elements.destSelection && elements.destSelection.textContent.trim()) {
+                    const queueText = elements.destSelection.textContent.trim();
+                    this.log('info', `Fila detectada (método 1): ${queueText}`);
+                    return queueText;
+                }
+                
+                // Método 2: Verificar no select oculto
+                if (elements.destSelect && elements.destSelect.selectedOptions.length > 0) {
+                    const queueText = elements.destSelect.selectedOptions[0].textContent.trim();
+                    this.log('info', `Fila detectada (método 2): ${queueText}`);
+                    return queueText;
+                }
+                
+                // Método 3: Verificar campo de input diretamente
+                if (elements.destSearch && elements.destSearch.value.trim()) {
+                    const queueText = elements.destSearch.value.trim();
+                    this.log('info', `Fila detectada (método 3): ${queueText}`);
+                    return queueText;
+                }
+                
+                // Método 4: Verificar por outros seletores comuns
+                const alternatives = [
+                    'select[name="Dest"] option:checked',
+                    '#DestQueueID option:checked',
+                    '.QueueID option:checked'
+                ];
+                
+                for (const selector of alternatives) {
+                    const element = this.getCachedElement(selector);
+                    if (element && element.textContent.trim()) {
+                        const queueText = element.textContent.trim();
+                        this.log('info', `Fila detectada (método alternativo): ${queueText}`);
+                        return queueText;
+                    }
+                }
+                
+                this.log('info', 'Nenhuma fila detectada');
+                return null;
+            } catch (error) {
+                this.log('error', 'Erro ao obter fila atual', error);
+                return null;
+            }
+        }
+
+        /**
+         * Obter nível normalizado da fila atual - Versão otimizada
+         * @returns {string|null}
+         */
+        getCurrentQueueLevel() {
+            try {
+                const queue = this.getCurrentQueue();
+                if (queue) {
+                    return this.configManager.normalizeUserLevel(queue);
+                }
+                return null;
+            } catch (error) {
+                this.log('error', 'Erro ao obter nível da fila atual', error);
+                return null;
+            }
+        }
+
+        /**
+         * Verificar se ticket está em atendimento - Versão otimizada
+         * @returns {boolean}
+         */
+        isTicketInService() {
+            try {
+                const elements = this.getDOMElements();
+                if (!elements.coreElement) return false;
+
+                let serviceState = null;
+                const labels = Array.from(elements.coreElement.querySelectorAll("label"));
+                
+                for (const label of labels) {
+                    if (label.textContent === "Estado:") {
+                        serviceState = label.nextElementSibling?.title;
+                        break;
+                    }
+                }
+
+                const isInService = serviceState === "Em Atendimento";
+                this.log('info', `Ticket em atendimento: ${isInService} (Estado: ${serviceState})`);
+                
+                return isInService;
+            } catch (error) {
+                this.log('error', 'Erro ao verificar se ticket está em atendimento', error);
+                return false;
+            }
+        }
+
+        /**
+         * Verificar se é registro de requisições - Versão otimizada
+         * @returns {boolean|null}
+         */
+        isRequestRecord() {
+            try {
+                const elements = this.getDOMElements();
+                const service = elements.serviceSearch?.nextSibling;
+
+                if (!service) {
+                    this.log('info', 'Elemento de serviço não encontrado');
+                    return null;
+                }
+
+                const isRequestRecord = service.textContent === "Registro de Requisiçõesx";
+                this.log('info', `É registro de requisições: ${isRequestRecord}`);
+                
+                return isRequestRecord;
+            } catch (error) {
+                this.log('error', 'Erro ao verificar registro de requisições', error);
+                return null;
+            }
+        }
+
+        /**
+         * Verificar se serviço está vazio - Versão otimizada
+         * @returns {boolean}
+         */
+        isServiceEmpty() {
+            try {
+                const elements = this.getDOMElements();
+                const element = elements.serviceSearch?.parentElement;
+                
+                const isEmpty = element ? element.children.length === 1 : true;
+                this.log('info', `Serviço está vazio: ${isEmpty}`);
+                
+                return isEmpty;
+            } catch (error) {
+                this.log('error', 'Erro ao verificar se serviço está vazio', error);
+                return true; // Assumir vazio em caso de erro
+            }
+        }
+
+        /**
+         * Remover serviço selecionado - Versão otimizada
+         */
+        serviceRemover() {
+            try {
+                const elements = this.getDOMElements();
+                const service = elements.serviceSearch?.nextSibling?.children[1]?.firstChild;
+                
+                if (service && typeof service.click === 'function') {
+                    service.click();
+                    this.log('info', 'Serviço removido com sucesso');
+                } else {
+                    this.log('warn', 'Elemento de remoção de serviço não encontrado');
+                }
+            } catch (error) {
+                this.log('error', 'Erro ao remover serviço', error);
+            }
+        }
+
+        /**
+         * Verificar compatibilidade entre fila e perfil do usuário - Versão otimizada
+         * @returns {Object}
+         */
+        validateQueueCompatibility() {
+            try {
+                return this.benchmark('validateQueueCompatibility', async () => {
+                    const currentQueue = this.getCurrentQueue();
+                    const currentQueueLevel = this.getCurrentQueueLevel();
+                    const userProfile = this.configManager.getUserProfile();
+
+                    this.log('info', 'Validando compatibilidade de fila', {
+                        currentQueue,
+                        currentQueueLevel,
+                        userProfile
+                    });
+
+                    // Se não temos dados suficientes, não mostrar aviso
+                    if (!currentQueue || !userProfile) {
+                        this.log('info', 'Dados insuficientes para validação - fila ou perfil não detectados');
+                        return {
+                            currentQueue: currentQueue || 'Não detectada',
+                            currentQueueLevel: currentQueueLevel || 'Não detectado',
+                            userProfile: userProfile || 'Não detectado',
+                            isCompatible: true, // Assumir compatível se não podemos validar
+                            shouldShowWarning: false,
+                            validationStatus: 'insufficient_data'
+                        };
+                    }
+
+                    const isCompatible = currentQueueLevel && userProfile && 
+                                        this.configManager.compareUserLevels(currentQueueLevel, userProfile);
+
+                    const result = {
+                        currentQueue,
+                        currentQueueLevel,
+                        userProfile,
+                        isCompatible,
+                        shouldShowWarning: !isCompatible && currentQueue && userProfile,
+                        validationStatus: 'completed',
+                        timestamp: new Date().toISOString()
+                    };
+
+                    this.log('info', 'Validação de compatibilidade concluída', result);
+                    return result;
+                });
+            } catch (error) {
+                this.log('error', 'Erro na validação de compatibilidade', error);
+                return {
+                    currentQueue: 'Erro',
+                    currentQueueLevel: 'Erro',
+                    userProfile: 'Erro',
+                    isCompatible: true, // Assumir compatível em caso de erro
+                    shouldShowWarning: false,
+                    validationStatus: 'error',
+                    error: error.message
+                };
+            }
+        }
+
+        /**
+         * Inicializar validações de fila - Versão otimizada
+         */
+        init() {
+            try {
+                if (!this.configManager.isFeatureEnabled('queueValidation')) {
+                    this.log('info', 'Validação de fila desabilitada');
+                    return;
+                }
+
+                this.log('info', 'Inicializando validador de filas');
+                this.setupEventListeners();
+                
+                // Executar validação inicial
+                setTimeout(() => {
+                    this.validateCurrentQueue();
+                }, 1000);
+                
+            } catch (error) {
+                this.log('error', 'Erro ao inicializar QueueValidator', error);
+            }
+        }
+
+        /**
+         * Configurar event listeners - Versão otimizada com debounce
+         */
+        setupEventListeners() {
+            try {
+                let validationTimer = null;
+                
+                // Função debounced para validação
+                const debouncedValidation = () => {
+                    if (validationTimer) {
+                        clearTimeout(validationTimer);
+                    }
+                    validationTimer = setTimeout(() => {
+                        this.validateCurrentQueue();
+                    }, 300); // 300ms debounce
+                };
+
+                // Observar mudanças na seleção de fila
+                const observer = new MutationObserver((mutations) => {
+                    let shouldValidate = false;
+                    
+                    for (const mutation of mutations) {
+                        if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                            shouldValidate = true;
+                            break;
+                        }
+                    }
+                    
+                    if (shouldValidate) {
+                        debouncedValidation();
+                    }
+                });
+
+                // Observar mudanças no elemento de seleção
+                const elements = this.getDOMElements();
+                if (elements.destSearch && elements.destSearch.parentElement) {
+                    observer.observe(elements.destSearch.parentElement, {
+                        childList: true,
+                        subtree: true,
+                        characterData: true
+                    });
+                    
+                    this.log('info', 'Event listeners configurados com sucesso');
+                } else {
+                    this.log('warn', 'Elemento de destino não encontrado para observação');
+                }
+                
+                // Armazenar observer para limpeza posterior
+                this.mutationObserver = observer;
+                
+            } catch (error) {
+                this.log('error', 'Erro ao configurar event listeners', error);
+            }
+        }
+
+        /**
+         * Validar fila atual - Versão otimizada com tratamento de erros
+         */
+        validateCurrentQueue() {
+            try {
+                this.benchmark('validateCurrentQueue', async () => {
+                    const validation = await this.validateQueueCompatibility();
+                    
+                    this.log('info', 'Resultado da validação', validation);
+                    
+                    // Só mostrar alerta de perfil e fila se há incompatibilidade
+                    if (validation.shouldShowWarning) {
+                        this.log('info', 'Mostrando alerta - perfis incompatíveis');
+                        
+                        if (validation.currentQueue && validation.userProfile && this.alertSystem) {
+                            // Mostrar alerta de perfil do usuário
+                            this.alertSystem.showUserProfileAlert?.(validation.userProfile, validation.currentQueue);
+                            
+                            // Mostrar alerta de validação completa
+                            if (this.alertSystem.validateAndShowAlerts) {
+                                this.alertSystem.validateAndShowAlerts(this.configManager, this);
+                            }
+                            
+                            // Mostrar aviso de compatibilidade detalhado
+                            const alertId = 'queue-compatibility-warning';
+                            const message = `A fila selecionada "${validation.currentQueue}" pode não ser compatível com o perfil "${validation.userProfile}".`;
+                            
+                            this.alertSystem.showQueueWarning?.(
+                                alertId,
+                                message,
+                                validation.currentQueue || 'Não identificada',
+                                validation.userProfile || 'Não identificado'
+                            );
+                        } else {
+                            this.log('warn', 'AlertSystem não disponível - alertas não serão exibidos');
+                        }
+                    } else {
+                        this.log('info', 'Perfis compatíveis - removendo alertas existentes');
+                        // Remover alertas existentes se compatíveis
+                        if (this.alertSystem) {
+                            this.alertSystem.remove?.('user-profile-alert');
+                            this.alertSystem.remove?.('service-type-queue-alert');
+                            this.alertSystem.remove?.('queue-compatibility-warning');
+                        }
+                    }
+                });
+            } catch (error) {
+                this.log('error', 'Erro ao validar fila atual', error);
+            }
+        }
+
+        /**
+         * Obter estatísticas do QueueValidator
+         * @returns {Object} Estatísticas completas
+         */
+        getStats() {
+            try {
+                return {
+                    performance: this.getPerformanceMetrics(),
+                    cache: {
+                        size: this.domCache.size,
+                        keys: Array.from(this.domCache.keys())
+                    },
+                    currentQueue: this.getCurrentQueue(),
+                    currentQueueLevel: this.getCurrentQueueLevel(),
+                    isEnabled: this.isEnabled,
+                    timestamp: new Date().toISOString()
+                };
+            } catch (error) {
+                this.log('error', 'Erro ao obter estatísticas', error);
+                return { error: error.message };
+            }
+        }
+
+        /**
+         * Método de limpeza para prevenir memory leaks
+         */
+        dispose() {
+            try {
+                // Limpar cache DOM
+                this.clearDOMCache();
+                
+                // Limpar métricas de performance
+                this.performanceMetrics.clear();
+                
+                // Desconectar observer se existir
+                if (this.mutationObserver) {
+                    this.mutationObserver.disconnect();
+                    this.mutationObserver = null;
+                }
+                
+                // Desabilitar validator
+                this.isEnabled = false;
+                
+                this.log('info', 'QueueValidator disposed successfully');
+            } catch (error) {
+                console.error('QueueValidator: Erro durante dispose:', error);
+            }
+        }
     }
 
-    /**
-     * Verificar se ticket está em atendimento
-     * @returns {boolean}
-     */
-    isTicketInService() {
-        let serviceState;
+    // Disponibilizar globalmente
+    global.HelpOTRS = global.HelpOTRS || {};
+    global.HelpOTRS.QueueValidator = QueueValidator;
 
-        const coreElement = document.querySelector("#Core_UI_AutogeneratedID_1");
-        if (!coreElement) return false;
-
-        Array.from(coreElement.querySelectorAll("label")).forEach((label) => {
-            if (label.textContent === "Estado:") {
-                serviceState = label.nextElementSibling?.title;
+    // Auto-dispose ao descarregar página
+    if (typeof window !== 'undefined') {
+        window.addEventListener('beforeunload', () => {
+            if (global.HelpOTRS.queueValidatorInstance) {
+                global.HelpOTRS.queueValidatorInstance.dispose();
             }
         });
-
-        return serviceState === "Em Atendimento";
     }
-
-    /**
-     * Verificar se é registro de requisições
-     * @returns {boolean|null}
-     */
-    isRequestRecord() {
-        const service = document.querySelector("#ServiceID_Search")?.nextSibling;
-
-        if (!service) {
-            return null;
-        }
-
-        return service.textContent === "Registro de Requisiçõesx";
-    }
-
-    /**
-     * Verificar se serviço está vazio
-     * @returns {boolean}
-     */
-    isServiceEmpty() {
-        const element = document.querySelector("#ServiceID_Search")?.parentElement;
-        return element ? element.children.length == 1 : true;
-    }
-
-    /**
-     * Remover serviço selecionado
-     */
-    serviceRemover() {
-        const service = document.querySelector("#ServiceID_Search")?.nextSibling?.children[1]?.firstChild;
-        if (service) {
-            service.click();
-        }
-    }
-
-    /**
-     * Verificar compatibilidade entre fila e perfil do usuário
-     * @returns {Object}
-     */
-    validateQueueCompatibility() {
-        const currentQueue = this.getCurrentQueue();
-        const currentQueueLevel = this.getCurrentQueueLevel();
-        const userProfile = this.configManager.getUserProfile();
-
-        console.log('Help OTRS: Validando compatibilidade de fila:', {
-            currentQueue,
-            currentQueueLevel,
-            userProfile
-        });
-
-        // Se não temos dados suficientes, não mostrar aviso
-        if (!currentQueue || !userProfile) {
-            console.log('Help OTRS: Dados insuficientes para validação - fila ou perfil não detectados');
-            return {
-                currentQueue: currentQueue || 'Não detectada',
-                currentQueueLevel: currentQueueLevel || 'Não detectado',
-                userProfile: userProfile || 'Não detectado',
-                isCompatible: true, // Assumir compatível se não podemos validar
-                shouldShowWarning: false
-            };
-        }
-
-        const isCompatible = currentQueueLevel && userProfile && 
-                            this.configManager.compareUserLevels(currentQueueLevel, userProfile);
-
-        return {
-            currentQueue,
-            currentQueueLevel,
-            userProfile,
-            isCompatible,
-            shouldShowWarning: !isCompatible && currentQueue && userProfile
-        };
-    }
-
-    /**
-     * Inicializar validações de fila
-     */
-    init() {
-        if (!this.configManager.isFeatureEnabled('queueValidation')) {
-            console.log('Help OTRS: Validação de fila desabilitada');
-            return;
-        }
-
-        console.log('Help OTRS: Inicializando validador de filas');
-        this.setupEventListeners();
-    }
-
-    /**
-     * Configurar event listeners
-     */
-    setupEventListeners() {
-        // Observar mudanças na seleção de fila
-        const observer = new MutationObserver(() => {
-            this.validateCurrentQueue();
-        });
-
-        // Observar mudanças no elemento de seleção
-        const destElement = document.querySelector("#Dest_Search");
-        if (destElement) {
-            observer.observe(destElement.parentElement, {
-                childList: true,
-                subtree: true,
-                characterData: true
-            });
-        }
-    }
-
-    /**
-     * Validar fila atual
-     */
-    validateCurrentQueue() {
-        const validation = this.validateQueueCompatibility();
-        
-        console.log('Help OTRS: Resultado da validação:', validation);
-        
-        // Só mostrar alerta de perfil e fila se há incompatibilidade
-        if (validation.shouldShowWarning) {
-            console.log('Help OTRS: Mostrando alerta - perfis incompatíveis');
-            if (validation.currentQueue && validation.userProfile) {
-                this.alertSystem?.showUserProfileAlert(validation.userProfile, validation.currentQueue);
-            }
-            
-            // Mostrar alerta de validação completa
-            if (this.alertSystem?.validateAndShowAlerts) {
-                this.alertSystem.validateAndShowAlerts(this.configManager, this);
-            }
-            
-            // Mostrar aviso de compatibilidade detalhado
-            const alertId = 'queue-compatibility-warning';
-            const message = `A fila selecionada "${validation.currentQueue}" pode não ser compatível com o perfil "${validation.userProfile}".`;
-            
-            this.alertSystem?.showQueueWarning(
-                alertId,
-                message,
-                validation.currentQueue || 'Não identificada',
-                validation.userProfile || 'Não identificado'
-            );
-        } else {
-            console.log('Help OTRS: Perfis compatíveis - não mostrando alertas');
-            // Remover alertas existentes se compatíveis
-            this.alertSystem?.remove('user-profile-alert');
-            this.alertSystem?.remove('service-type-queue-alert');
-            this.alertSystem?.remove('queue-compatibility-warning');
-        }
-    }
-}
-
-// Disponibilizar globalmente
-global.HelpOTRS = global.HelpOTRS || {};
-global.HelpOTRS.QueueValidator = QueueValidator;
 
 })(window);
