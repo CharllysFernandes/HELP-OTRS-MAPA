@@ -516,7 +516,8 @@
         showQueueWarning(id, message, queue, userProfile) {
             const title = '⚠️ Aviso de Fila';
             const fullMessage = `${message}<br><br><strong>Fila:</strong> ${queue}<br><strong>Perfil:</strong> ${userProfile}`;
-            this.showWarning(id, title, fullMessage);
+            // Alerta de validação de fila - deve permanecer visível
+            this.showWarning(id, title, fullMessage, { autoRemove: 0 });
         }
 
         /**
@@ -568,7 +569,8 @@
         showUserProfileAlert(userProfile, queue) {
             const id = 'user-profile-alert';
             const message = `Seu perfil é <strong>${userProfile}</strong> e você está abrindo chamado para a fila <strong>${queue}</strong>.`;
-            this.showInfo(id, '', message, { aboveButton: true });
+            // Alerta persistente - não deve ser removido automaticamente
+            this.showInfo(id, '', message, { aboveButton: true, autoRemove: 0 });
         }
 
         /**
@@ -580,7 +582,8 @@
         showServiceTypeQueueAlert(selectedQueue, currentServiceType, correctServiceType) {
             const id = 'service-type-queue-alert';
             const message = `A fila selecionada é <strong>${selectedQueue}</strong> e o tipo de atendimento está marcado como <strong>${currentServiceType}</strong>. O correto deveria ser <strong>${correctServiceType}</strong>.`;
-            this.showWarning(id, '⚠️ Verificação de Tipo de Atendimento', message, { aboveButton: true });
+            // Alerta de validação importante - deve permanecer visível
+            this.showWarning(id, '⚠️ Verificação de Tipo de Atendimento', message, { aboveButton: true, autoRemove: 0 });
         }
 
         /**
@@ -646,13 +649,24 @@
                 'select[name*="ServiceType"] option:selected',
                 'input[name*="TipoAtendimento"]:checked',
                 'select[name*="TipoAtendimento"] option:selected',
-                // Campos dinâmicos comuns
-                'input[id*="DynamicField"][id*="Tipo"]:checked',
-                'select[id*="DynamicField"][id*="Tipo"] option:selected'
+                // Campos dinâmicos comuns - corrigido seletores inválidos
+                'input[id*="DynamicField"]:checked',
+                'select[id*="DynamicField"] option:selected',
+                'input[id*="Tipo"]:checked',
+                'select[id*="Tipo"] option:selected'
             ];
             
-            // Usar querySelectorAll uma vez e filtrar
-            const allElements = document.querySelectorAll(serviceSelectors.join(', '));
+            let allElements = [];
+            
+            // Executar cada seletor individualmente para evitar erros de sintaxe
+            for (const selector of serviceSelectors) {
+                try {
+                    const elements = document.querySelectorAll(selector);
+                    allElements = allElements.concat(Array.from(elements));
+                } catch (error) {
+                    console.warn(`Help OTRS AlertSystem: Seletor inválido ignorado: ${selector}`, error);
+                }
+            }
             let result = null;
             
             for (const element of allElements) {
