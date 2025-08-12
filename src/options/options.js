@@ -1257,68 +1257,15 @@ function loadExtensionInfo() {
         
         // Atualizar versão
         const versionElement = document.getElementById('extensionVersion');
-        const versionNameElement = document.getElementById('versionName');
-        
         if (versionElement) {
             versionElement.textContent = `v${manifest.version}`;
             versionElement.title = `Versão ${manifest.version} da extensão ${manifest.name}`;
         }
         
-        if (versionNameElement && manifest.version_name) {
-            // Extrair apenas a parte após o hífen da version_name
-            const versionParts = manifest.version_name.split(' - ');
-            const displayName = versionParts.length > 1 ? versionParts[1] : manifest.version_name;
-            versionNameElement.textContent = displayName;
-            versionNameElement.title = manifest.version_name;
-        }
-        
-        // Atualizar data de build com informações mais detalhadas
-        const buildDateElement = document.getElementById('buildDate');
-        if (buildDateElement) {
-            const currentDate = new Date();
-            const dateString = currentDate.toLocaleDateString('pt-BR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            
-            // Adicionar informações do manifest
-            const manifestVersion = manifest.manifest_version;
-            buildDateElement.innerHTML = `
-                Última atualização: ${dateString}<br>
-                <small style="opacity: 0.7;">Manifest v${manifestVersion} • Build ${manifest.version}</small>
-            `;
-        }
-        
-        // Adicionar título aos links com informações do projeto
-        const githubLink = document.querySelector('.github-link');
-        if (githubLink) {
-            githubLink.title = `Ver código-fonte da extensão ${manifest.name} no GitHub`;
-        }
-        
-        const issuesLink = document.querySelector('.issues-link');
-        if (issuesLink) {
-            issuesLink.title = 'Reportar bugs ou sugerir melhorias para a extensão';
-        }
-        
-        const releasesLink = document.querySelector('.releases-link');
-        if (releasesLink) {
-            releasesLink.title = 'Ver histórico de versões e downloads';
-        }
-        
-        const readmeLink = document.querySelector('.readme-link');
-        if (readmeLink) {
-            readmeLink.title = 'Ler documentação e instruções de uso';
-        }
-        
-        // Log das informações carregadas
         console.log('✅ Informações da extensão carregadas:', {
             name: manifest.name,
             version: manifest.version,
-            version_name: manifest.version_name,
-            author: manifest.author,
-            description: manifest.description,
-            manifest_version: manifest.manifest_version
+            author: manifest.author
         });
         
     } catch (error) {
@@ -1329,11 +1276,6 @@ function loadExtensionInfo() {
         if (versionElement) {
             versionElement.textContent = 'v1.0.2';
             versionElement.title = 'Versão da extensão (fallback)';
-        }
-        
-        const versionNameElement = document.getElementById('versionName');
-        if (versionNameElement) {
-            versionNameElement.textContent = 'Correções e Melhorias';
         }
     }
 }

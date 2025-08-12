@@ -895,150 +895,19 @@ footer {
 
 /* ===== FOOTER DA EXTENSÃO ===== */
 .extension-footer {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-top: 2px solid #dee2e6;
-    margin-top: 3rem;
-    padding: 2rem 0 1rem;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    margin-top: 2rem;
+    padding: 1.5rem 0;
 }
 
 .footer-content {
     max-width: 800px;
     margin: 0 auto;
     padding: 0 2rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    margin-bottom: 1.5rem;
 }
 
-.footer-section {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e9ecef;
-}
-
-.footer-section h4 {
-    color: #2c5aa0;
-    margin-bottom: 1rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* Seção de Versão */
-.version-info {
-    text-align: center;
-}
-
-.version-details {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.version-badge {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 1rem;
-    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
-}
-
-.version-name {
-    color: #6c757d;
-    font-size: 0.85rem;
-    font-style: italic;
-}
-
-/* Seção de Autores */
-.authors-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.author {
-    display: flex;
-    flex-direction: column;
-    padding: 0.75rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border-left: 4px solid #2c5aa0;
-}
-
-.author-name {
-    font-weight: 600;
-    color: #2c5aa0;
-    font-size: 0.95rem;
-}
-
-.author-role {
-    color: #6c757d;
-    font-size: 0.8rem;
-    margin-top: 0.2rem;
-}
-
-/* Seção de Links */
-.links-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.project-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    text-decoration: none;
-    color: #2c5aa0;
-    transition: all 0.3s ease;
-    border: 1px solid #e9ecef;
-}
-
-.project-link:hover {
-    background: #2c5aa0;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(44, 90, 160, 0.3);
-    text-decoration: none;
-}
-
-.project-link.readme-link:hover {
-    background: #17a2b8;
-    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
-}
-
-.link-icon {
-    font-size: 1.1rem;
-}
-
-.link-text {
-    flex: 1;
-    font-weight: 500;
-    font-size: 0.9rem;
-}
-
-.external-icon {
-    font-size: 0.8rem;
-    opacity: 0.7;
-}
-
-/* Footer Bottom */
-.footer-bottom {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 1rem 2rem 0;
-    border-top: 1px solid #dee2e6;
+.footer-info {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1046,64 +915,58 @@ footer {
     gap: 1rem;
 }
 
-.copyright p {
-    color: #6c757d;
-    font-size: 0.8rem;
-    margin: 0;
+.version-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
-.build-info {
+.version-badge {
+    background: #2c5aa0;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.copyright {
     color: #6c757d;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
+}
+
+.footer-links {
+    display: flex;
+    gap: 1rem;
+}
+
+.footer-links a {
+    color: #2c5aa0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+    color: #1e3d72;
+    text-decoration: underline;
 }
 
 /* Responsividade do Footer */
 @media (max-width: 768px) {
-    .footer-content {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-        padding: 0 1rem;
-    }
-    
-    .footer-section {
-        padding: 1rem;
-    }
-    
-    .footer-bottom {
-        padding: 1rem 1rem 0;
+    .footer-info {
         flex-direction: column;
         text-align: center;
     }
     
-    .authors-list {
-        gap: 0.75rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .extension-footer {
-        padding: 1.5rem 0 1rem;
-    }
-    
-    .footer-content {
-        padding: 0 0.5rem;
-    }
-    
-    .footer-section {
-        padding: 0.75rem;
-    }
-    
-    .footer-section h4 {
-        font-size: 0.9rem;
-    }
-    
-    .project-link {
-        padding: 0.5rem;
+    .version-info {
+        flex-direction: column;
         gap: 0.5rem;
     }
     
-    .version-badge {
-        font-size: 0.9rem;
-        padding: 0.4rem 0.8rem;
+    .footer-content {
+        padding: 0 1rem;
     }
 }
