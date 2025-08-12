@@ -46,18 +46,20 @@
             return `
                 .help-otrs-alert {
                     position: relative;
-                    padding: 10px 16px;
-                    margin: 5px 0;
+                    padding: 8px 12px;
+                    margin: 3px 0;
                     border: 1px solid transparent;
                     border-radius: 4px;
                     font-family: Arial, sans-serif;
-                    font-size: 14px;
-                    line-height: 1.3;
+                    font-size: 11px;
+                    line-height: 0.5;
                     z-index: 1000;
                     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    display: flex;
+                    display: inline-flex;
                     align-items: center;
-                    min-height: 20px;
+                    max-width: fit-content;
+                    width: auto;
+                    min-height: auto;
                 }
 
                 .help-otrs-alert-error {
@@ -90,15 +92,20 @@
 
                 .help-otrs-alert-close {
                     position: absolute;
-                    top: 8px;
-                    right: 12px;
+                    right: 8px;
                     background: none;
                     border: none;
-                    font-size: 16px;
+                    font-size: 14px;
                     font-weight: bold;
                     cursor: pointer;
                     opacity: 0.7;
                     line-height: 1;
+                    padding: 0;
+                    width: 16px;
+                    height: 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
 
                 .help-otrs-alert-close:hover {
@@ -107,17 +114,24 @@
 
                 .help-otrs-alert-title {
                     font-weight: bold;
-                    margin-right: 8px;
+                    margin-right: 6px;
                     flex-shrink: 0;
                 }
 
                 .help-otrs-alert-message {
-                    margin: 0;
+                    margin: -2px;
                     flex: 1;
+                    padding-right: 20px;
+                    word-wrap: break-word;
                 }
 
                 .help-otrs-alert .help-otrs-alert-message strong {
                     font-weight: 600;
+                }
+
+                .help-otrs-queue-alert-container {
+                    display: inline-block;
+                    width: auto;
                 }
             `;
         }
@@ -365,9 +379,9 @@
                     alertSideContainer = document.createElement('div');
                     alertSideContainer.className = 'help-otrs-queue-alert-container';
                     alertSideContainer.style.cssText = `
-                        margin-top: 5px;
-                        margin-bottom: 10px;
                         position: relative;
+                        display: inline-block;
+                        width: auto;
                     `;
                     
                     // Inserir logo após o campo, mas antes das mensagens de erro
@@ -618,52 +632,6 @@
         }
 
         // Métodos específicos para validações (compatibilidade com código existente)
-
-        /**
-         * Mostrar aviso de fila com formatação
-         * @param {string} id 
-         * @param {string} message 
-         * @param {string} queue 
-         * @param {string} userProfile 
-         */
-        showQueueWarning(id, message, queue, userProfile) {
-            const title = '⚠️ Aviso de Fila';
-            const messageData = {
-                parts: [
-                    { type: 'text', content: message },
-                    { type: 'break' },
-                    { type: 'break' },
-                    { type: 'strong', content: 'Fila: ' },
-                    { type: 'text', content: queue },
-                    { type: 'break' },
-                    { type: 'strong', content: 'Perfil: ' },
-                    { type: 'text', content: userProfile }
-                ]
-            };
-            
-            // Remover alerta existente
-            this.remove(id);
-            
-            // Injetar estilos e criar elemento formatado
-            this.injectStyles();
-            const alert = this.createFormattedAlertElement(id, 'warning', title, messageData, true);
-            
-            // Inserir no DOM
-            let inserted = this.insertAlertAboveButton(alert);
-            if (!inserted) {
-                const container = this.findAlertContainer();
-                if (container) {
-                    container.insertBefore(alert, container.firstChild);
-                    inserted = true;
-                }
-            }
-            
-            if (inserted) {
-                this.alerts.set(id, alert);
-                this.observeAlertRemoval(id, alert);
-                console.log(`Help OTRS Alert [warning]: ${title} - ${message}`);
-            }
-        }
 
         /**
          * Mostrar alerta de técnico local
