@@ -1295,7 +1295,7 @@
         }
 
         /**
-         * Mostrar popup de reuso de dados
+         * Mostrar popup de reuso de dados com interface completa
          */
         showReusePopup() {
             return this.benchmark('showReusePopup', async () => {
@@ -1315,25 +1315,32 @@
                         return;
                     }
 
-                    // Gerar resumo dos dados capturados
-                    let dataList = '';
-                    let totalItems = 0;
-                    Object.keys(this.formData).forEach(fieldId => {
-                        const data = this.formData[fieldId];
-                        dataList += `<li><strong>${data.label}:</strong> ${data.value}</li>`;
-                        totalItems++;
-                    });
-
-                    if (this.alertSystem) {
-                        this.alertSystem.showInfo(
-                            'form-data-captured',
-                            `📋 Dados Capturados (${totalItems})`,
-                            `Dados encontrados nos formulários:<ul style="margin: 10px 0; padding-left: 20px;">${dataList}</ul><em>💡 Em breve: Interface completa para inserir dados no editor!</em>`,
-                            { autoRemove: 12000 }
-                        );
+                    // Verificar se já existe popup
+                    if (this.popup) {
+                        this.hidePopup();
+                        return;
                     }
 
-                    this.log('info', `Popup de reuso exibido com ${totalItems} itens`);
+                    // Encontrar editor de texto
+                    this.targetEditor = await this.findTextEditor();
+                    if (!this.targetEditor) {
+                        if (this.alertSystem) {
+                            this.alertSystem.showWarning(
+                                'no-editor-found',
+                                '❌ Editor Não Encontrado',
+                                'Não foi possível encontrar um editor de texto na página.',
+                                { autoRemove: 5000 }
+                            );
+                        }
+                        return;
+                    }
+
+                    // Criar e mostrar popup
+                    await this.createReusePopup();
+                    this.populatePopup();
+                    this.showPopup();
+
+                    this.log('info', `Popup de reuso exibido com ${Object.keys(this.formData).length} itens`);
                 } catch (error) {
                     this.log('error', 'Erro ao mostrar popup de reuso', error);
                     
@@ -1348,9 +1355,773 @@
                 }
             });
         }
+
+        /**
+         * Criar popup de reuso com interface completa
+         */
+        createReusePopup() {
+            return this.benchmark('createReusePopup', async () => {
+                try {
+                    // Remover popup existente
+                    if (this.popup) {
+                        this.popup.remove();
+                    }
+
+                    const popup = document.createElement('div');
+                    popup.id = 'helpOtrsFormReusePopup';
+                    popup.innerHTML = `
+                        <div class="reuse-popup-header">
+                            <div class="reuse-popup-title">
+                                <span class="reuse-popup-icon">📋</span>
+                                <span>Reaproveitar Dados do Formulário</span>
+                            </div>
+                            <button class="reuse-popup-close" type="button" title="Fechar">&times;</button>
+                        </div>
+                        <div class="reuse-popup-content">
+                            <div class="reuse-popup-description">
+                                <p>Clique nos dados abaixo para inserir no editor de texto:</p>
+                            </div>
+                            <div class="reuse-popup-categories" id="reusePopupCategories">
+                                <!-- Categorias serão inseridas aqui -->
+                            </div>
+                            <div class="reuse-popup-actions">
+                                <button class="reuse-action-btn reuse-btn-insert-all" type="button">
+                                    <span>📝</span> Inserir Todos
+                                </button>
+                                <button class="reuse-action-btn reuse-btn-clear" type="button">
+                                    <span>🗑️</span> Limpar Dados
+                                </button>
+                            </div>
+                        </div>
+                    `;
+
+                    // Aplicar estilos
+                    popup.style.cssText = `
+                        position: fixed;
+                        top: 50%;
+                        right: 20px;
+                        transform: translateY(-50%);
+                        width: 320px;
+                        max-height: 80vh;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        border: none;
+                        border-radius: 15px;
+                        box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+                        z-index: 10000;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        color: white;
+                        opacity: 0;
+                        transform: translateY(-50%) translateX(100px);
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        backdrop-filter: blur(15px);
+                        overflow: hidden;
+                    `;
+
+                    this.popup = popup;
+                    document.body.appendChild(popup);
+
+                    // Adicionar estilos internos
+                    this.addReusePopupStyles();
+
+                    // Configurar event listeners
+                    this.setupPopupEventListeners();
+
+                    // Tornar arrastável
+                    this.makePopupDraggable();
+
+                    return popup;
+                } catch (error) {
+                    this.log('error', 'Erro ao criar popup de reuso', error);
+                    throw error;
+                }
+            });
+        }
+
+        /**
+         * Adicionar estilos CSS para o popup
+         */
+        addReusePopupStyles() {
+            const existingStyle = document.getElementById('helpOtrsReusePopupStyles');
+            if (existingStyle) return;
+
+            const style = document.createElement('style');
+            style.id = 'helpOtrsReusePopupStyles';
+            style.textContent = `
+                #helpOtrsFormReusePopup .reuse-popup-header {
+                    padding: 20px;
+                    background: rgba(255,255,255,0.15);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    backdrop-filter: blur(10px);
+                    border-bottom: 1px solid rgba(255,255,255,0.2);
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-title {
+                    display: flex;
+                    align-items: center;
+                    font-weight: 600;
+                    font-size: 16px;
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-icon {
+                    font-size: 20px;
+                    margin-right: 10px;
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-close {
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-close:hover {
+                    background: rgba(255,255,255,0.2);
+                    transform: rotate(90deg);
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-content {
+                    padding: 20px;
+                    max-height: 60vh;
+                    overflow-y: auto;
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-description {
+                    margin-bottom: 20px;
+                    font-size: 14px;
+                    opacity: 0.9;
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-description p {
+                    margin: 0;
+                }
+
+                #helpOtrsFormReusePopup .reuse-category {
+                    margin-bottom: 20px;
+                }
+
+                #helpOtrsFormReusePopup .reuse-category-title {
+                    font-size: 13px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    opacity: 0.8;
+                    margin-bottom: 12px;
+                    padding-bottom: 6px;
+                    border-bottom: 1px solid rgba(255,255,255,0.3);
+                    letter-spacing: 0.5px;
+                }
+
+                #helpOtrsFormReusePopup .reuse-data-item {
+                    background: rgba(255,255,255,0.1);
+                    border: 1px solid rgba(255,255,255,0.2);
+                    border-radius: 10px;
+                    padding: 12px;
+                    margin-bottom: 10px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    font-size: 13px;
+                    word-wrap: break-word;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                #helpOtrsFormReusePopup .reuse-data-item:hover {
+                    background: rgba(255,255,255,0.2);
+                    transform: translateX(-3px);
+                    box-shadow: 3px 3px 12px rgba(0,0,0,0.2);
+                }
+
+                #helpOtrsFormReusePopup .reuse-data-item:active {
+                    transform: translateX(-1px) scale(0.98);
+                }
+
+                #helpOtrsFormReusePopup .reuse-data-item.inserted {
+                    background: linear-gradient(45deg, #4CAF50, #8BC34A) !important;
+                    color: white !important;
+                    animation: insertedPulse 0.6s ease-in-out;
+                }
+
+                #helpOtrsFormReusePopup .reuse-insertion-feedback {
+                    position: absolute;
+                    top: 50%;
+                    right: 10px;
+                    transform: translateY(-50%);
+                    background: rgba(76, 175, 80, 0.9);
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 11px;
+                    font-weight: 500;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                    z-index: 10;
+                }
+
+                @keyframes insertedPulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                    100% { transform: scale(1); }
+                }
+
+                #helpOtrsFormReusePopup .reuse-data-label {
+                    display: block;
+                    font-weight: 600;
+                    margin-bottom: 6px;
+                    color: rgba(255,255,255,0.95);
+                }
+
+                #helpOtrsFormReusePopup .reuse-data-value {
+                    opacity: 0.85;
+                    font-size: 12px;
+                    line-height: 1.4;
+                    word-break: break-word;
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-actions {
+                    margin-top: 20px;
+                    padding-top: 20px;
+                    border-top: 1px solid rgba(255,255,255,0.2);
+                    display: flex;
+                    gap: 10px;
+                }
+
+                #helpOtrsFormReusePopup .reuse-action-btn {
+                    flex: 1;
+                    background: rgba(255,255,255,0.15);
+                    border: 1px solid rgba(255,255,255,0.3);
+                    color: white;
+                    padding: 12px 16px;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                }
+
+                #helpOtrsFormReusePopup .reuse-action-btn:hover {
+                    background: rgba(255,255,255,0.25);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                }
+
+                #helpOtrsFormReusePopup .reuse-btn-clear:hover {
+                    background: rgba(255,100,100,0.3);
+                    border-color: rgba(255,150,150,0.5);
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-content::-webkit-scrollbar {
+                    width: 6px;
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-content::-webkit-scrollbar-track {
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 3px;
+                }
+
+                #helpOtrsFormReusePopup .reuse-popup-content::-webkit-scrollbar-thumb {
+                    background: rgba(255,255,255,0.4);
+                    border-radius: 3px;
+                }
+
+                #helpOtrsFormReusePopup .reuse-insertion-feedback {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(40, 167, 69, 0.95);
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: 500;
+                    z-index: 1000;
+                    opacity: 0;
+                    transition: opacity 0.2s;
+                }
+
+                @keyframes reuseItemInserted {
+                    0% { transform: scale(1); background: rgba(255,255,255,0.1); }
+                    50% { transform: scale(0.95); background: rgba(40,167,69,0.3); }
+                    100% { transform: scale(1); background: rgba(255,255,255,0.1); }
+                }
+
+                #helpOtrsFormReusePopup .reuse-data-item.inserted {
+                    animation: reuseItemInserted 0.6s ease-in-out;
+                }
+            `;
+            
+            document.head.appendChild(style);
+        }
+
+        /**
+         * Configurar event listeners do popup
+         */
+        setupPopupEventListeners() {
+            try {
+                // Botão fechar
+                const closeBtn = this.popup.querySelector('.reuse-popup-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => this.hidePopup());
+                }
+
+                // Botão inserir todos
+                const insertAllBtn = this.popup.querySelector('.reuse-btn-insert-all');
+                if (insertAllBtn) {
+                    insertAllBtn.addEventListener('click', () => this.insertAllData());
+                }
+
+                // Botão limpar dados
+                const clearBtn = this.popup.querySelector('.reuse-btn-clear');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', () => this.clearFormData());
+                }
+
+                // Fechar ao clicar fora do popup
+                document.addEventListener('click', (event) => {
+                    if (this.popup && !this.popup.contains(event.target) && event.target.id !== 'helpOtrsReuseBtn') {
+                        this.hidePopup();
+                    }
+                });
+
+                this.log('info', 'Event listeners do popup configurados');
+            } catch (error) {
+                this.log('error', 'Erro ao configurar event listeners do popup', error);
+            }
+        }
+
+        /**
+         * Tornar popup arrastável
+         */
+        makePopupDraggable() {
+            try {
+                let isDragging = false;
+                let startX, startY, startLeft, startTop;
+                
+                const header = this.popup.querySelector('.reuse-popup-header');
+                if (!header) return;
+                
+                header.style.cursor = 'move';
+                
+                header.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('reuse-popup-close')) return;
+                    
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startLeft = this.popup.offsetLeft;
+                    startTop = this.popup.offsetTop;
+                    
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+                
+                const onMouseMove = (e) => {
+                    if (!isDragging) return;
+                    
+                    const deltaX = e.clientX - startX;
+                    const deltaY = e.clientY - startY;
+                    
+                    this.popup.style.left = (startLeft + deltaX) + 'px';
+                    this.popup.style.top = (startTop + deltaY) + 'px';
+                    this.popup.style.right = 'auto';
+                    this.popup.style.transform = 'none';
+                };
+                
+                const onMouseUp = () => {
+                    isDragging = false;
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+
+                this.log('info', 'Popup configurado como arrastável');
+            } catch (error) {
+                this.log('error', 'Erro ao configurar popup arrastável', error);
+            }
+        }
+
+        /**
+         * Popular popup com dados capturados
+         */
+        populatePopup() {
+            try {
+                const categoriesContainer = this.popup.querySelector('#reusePopupCategories');
+                if (!categoriesContainer) return;
+
+                categoriesContainer.innerHTML = '';
+
+                // Agrupar dados por categoria
+                const categories = {};
+                Object.keys(this.formData).forEach(fieldId => {
+                    const data = this.formData[fieldId];
+                    if (!categories[data.category]) {
+                        categories[data.category] = [];
+                    }
+                    categories[data.category].push({ fieldId, ...data });
+                });
+
+                // Mapear nomes das categorias
+                const categoryNames = {
+                    'cliente': '👤 Cliente',
+                    'contato': '📞 Contato', 
+                    'localizacao': '📍 Localização',
+                    'patrimonio': '💼 Patrimônio',
+                    'organizacional': '🏛️ Organização',
+                    'adicional': '📝 Adicional',
+                    'geral': '📄 Geral'
+                };
+
+                // Criar elementos para cada categoria
+                Object.keys(categories).forEach(categoryKey => {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'reuse-category';
+
+                    const categoryTitle = document.createElement('div');
+                    categoryTitle.className = 'reuse-category-title';
+                    categoryTitle.textContent = categoryNames[categoryKey] || categoryKey.toUpperCase();
+                    categoryDiv.appendChild(categoryTitle);
+
+                    categories[categoryKey].forEach(item => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'reuse-data-item';
+                        itemDiv.setAttribute('data-field-id', item.fieldId);
+                        itemDiv.innerHTML = `
+                            <div class="reuse-data-label">${item.label}</div>
+                            <div class="reuse-data-value">${item.value}</div>
+                        `;
+                        
+                        itemDiv.addEventListener('click', async () => {
+                            await this.insertDataIntoEditor(item);
+                            this.showInsertionFeedback(itemDiv, item.label);
+                        });
+
+                        categoryDiv.appendChild(itemDiv);
+                    });
+
+                    categoriesContainer.appendChild(categoryDiv);
+                });
+
+                if (Object.keys(categories).length === 0) {
+                    categoriesContainer.innerHTML = '<p style="opacity: 0.7; font-size: 13px; text-align: center; padding: 30px;">Nenhum dado encontrado nos formulários</p>';
+                }
+
+                this.log('info', `Popup populado com ${Object.keys(this.formData).length} itens`);
+            } catch (error) {
+                this.log('error', 'Erro ao popular popup', error);
+            }
+        }
+
+        /**
+         * Mostrar popup com animação
+         */
+        showPopup() {
+            if (!this.popup) return;
+
+            setTimeout(() => {
+                this.popup.style.opacity = '1';
+                this.popup.style.transform = 'translateY(-50%) translateX(0)';
+            }, 100);
+
+            this.isVisible = true;
+            this.log('info', 'Popup exibido com sucesso');
+        }
+
+        /**
+         * Esconder popup com animação
+         */
+        hidePopup() {
+            if (!this.popup) return;
+
+            this.popup.style.opacity = '0';
+            this.popup.style.transform = 'translateY(-50%) translateX(100px)';
+            
+            setTimeout(() => {
+                if (this.popup) {
+                    this.popup.remove();
+                    this.popup = null;
+                }
+            }, 300);
+
+            this.isVisible = false;
+            this.log('info', 'Popup ocultado');
+        }
+
+        /**
+         * Inserir dados no editor de texto
+         */
+        insertDataIntoEditor(item) {
+            return this.benchmark('insertDataIntoEditor', async () => {
+                try {
+                    if (!this.targetEditor) {
+                        this.targetEditor = await this.findTextEditor();
+                        if (!this.targetEditor) {
+                            throw new Error('Editor de texto não encontrado');
+                        }
+                    }
+
+                    const textToInsert = `<strong>${item.label}:</strong> ${item.value}<br>`;
+
+                    // Inserir no CKEditor (iframe)
+                    if (this.targetEditor.tagName === 'IFRAME') {
+                        await this.insertIntoCKEditor(textToInsert);
+                    } 
+                    // Inserir em textarea
+                    else if (this.targetEditor.tagName === 'TEXTAREA') {
+                        this.insertIntoTextarea(textToInsert);
+                    }
+                    // Inserir em div contenteditable
+                    else if (this.targetEditor.contentEditable === 'true') {
+                        this.insertIntoContentEditable(textToInsert);
+                    }
+                    else {
+                        throw new Error('Tipo de editor não suportado');
+                    }
+
+                    this.log('info', `Dados inseridos no editor: ${item.label}`);
+                    return true;
+                } catch (error) {
+                    this.log('error', 'Erro ao inserir dados no editor', error);
+                    
+                    if (this.alertSystem) {
+                        this.alertSystem.showError(
+                            'insert-error',
+                            '❌ Erro na Inserção',
+                            `Não foi possível inserir "${item.label}" no editor.`,
+                            { autoRemove: 3000 }
+                        );
+                    }
+                    return false;
+                }
+            });
+        }
+
+        /**
+         * Inserir no CKEditor (iframe)
+         */
+        insertIntoCKEditor(html) {
+            try {
+                const iframeDoc = this.targetEditor.contentDocument || this.targetEditor.contentWindow.document;
+                const body = iframeDoc.body;
+
+                if (!body) {
+                    throw new Error('Corpo do CKEditor não encontrado');
+                }
+
+                // Inserir no final do conteúdo
+                const div = iframeDoc.createElement('div');
+                div.innerHTML = html;
+                body.appendChild(div);
+
+                // Focar no editor
+                if (this.targetEditor.contentWindow) {
+                    this.targetEditor.contentWindow.focus();
+                }
+
+                this.log('info', 'Dados inseridos no CKEditor');
+            } catch (error) {
+                this.log('error', 'Erro ao inserir no CKEditor', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Inserir em textarea
+         */
+        insertIntoTextarea(text) {
+            try {
+                const plainText = text.replace(/<[^>]*>/g, ''); // Remover HTML
+                const currentValue = this.targetEditor.value;
+                this.targetEditor.value = currentValue + (currentValue ? '\n' : '') + plainText;
+                
+                // Focar e posicionar cursor no final
+                this.targetEditor.focus();
+                this.targetEditor.setSelectionRange(this.targetEditor.value.length, this.targetEditor.value.length);
+
+                this.log('info', 'Dados inseridos na textarea');
+            } catch (error) {
+                this.log('error', 'Erro ao inserir na textarea', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Inserir em elemento contenteditable
+         */
+        insertIntoContentEditable(html) {
+            try {
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                this.targetEditor.appendChild(div);
+                
+                // Focar no editor
+                this.targetEditor.focus();
+
+                this.log('info', 'Dados inseridos no elemento contenteditable');
+            } catch (error) {
+                this.log('error', 'Erro ao inserir no contenteditable', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Inserir todos os dados de uma vez
+         */
+        insertAllData() {
+            return this.benchmark('insertAllData', async () => {
+                try {
+                    const items = Object.keys(this.formData).map(fieldId => ({
+                        fieldId,
+                        ...this.formData[fieldId]
+                    }));
+
+                    let successCount = 0;
+                    for (const item of items) {
+                        const success = await this.insertDataIntoEditor(item);
+                        if (success) {
+                            successCount++;
+                            
+                            // Adicionar animação visual
+                            const itemElement = this.popup.querySelector(`[data-field-id="${item.fieldId}"]`);
+                            if (itemElement) {
+                                itemElement.classList.add('inserted');
+                                setTimeout(() => itemElement.classList.remove('inserted'), 600);
+                            }
+                            
+                            // Pequena pausa entre inserções
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                        }
+                    }
+
+                    if (this.alertSystem) {
+                        this.alertSystem.showSuccess(
+                            'all-data-inserted',
+                            '✅ Dados Inseridos',
+                            `${successCount} de ${items.length} itens inseridos com sucesso.`,
+                            { autoRemove: 4000 }
+                        );
+                    }
+
+                    this.log('info', `Todos os dados inseridos: ${successCount}/${items.length}`);
+                } catch (error) {
+                    this.log('error', 'Erro ao inserir todos os dados', error);
+                    
+                    if (this.alertSystem) {
+                        this.alertSystem.showError(
+                            'insert-all-error',
+                            '❌ Erro na Inserção',
+                            'Erro ao inserir dados em lote.',
+                            { autoRemove: 3000 }
+                        );
+                    }
+                }
+            });
+        }
+
+        /**
+         * Limpar dados do formulário
+         */
+        clearFormData() {
+            try {
+                this.formData = {};
+                this.populatePopup();
+                
+                if (this.alertSystem) {
+                    this.alertSystem.showInfo(
+                        'data-cleared',
+                        '🗑️ Dados Limpos',
+                        'Cache de dados do formulário foi limpo.',
+                        { autoRemove: 2000 }
+                    );
+                }
+
+                this.log('info', 'Dados do formulário limpos');
+            } catch (error) {
+                this.log('error', 'Erro ao limpar dados', error);
+            }
+        }
+
+        /**
+         * Mostrar feedback visual de inserção
+         */
+        showInsertionFeedback(element, label) {
+            try {
+                // Adicionar classe de animação
+                element.classList.add('inserted');
+                setTimeout(() => element.classList.remove('inserted'), 600);
+
+                // Feedback temporário
+                const feedback = document.createElement('div');
+                feedback.className = 'reuse-insertion-feedback';
+                feedback.textContent = `✅ ${label}`;
+                element.appendChild(feedback);
+
+                // Animar feedback
+                setTimeout(() => {
+                    feedback.style.opacity = '1';
+                }, 50);
+
+                setTimeout(() => {
+                    feedback.style.opacity = '0';
+                    setTimeout(() => feedback.remove(), 200);
+                }, 1500);
+
+                this.log('info', `Feedback de inserção exibido para: ${label}`);
+            } catch (error) {
+                this.log('error', 'Erro ao mostrar feedback', error);
+            }
+        }
+
+        /**
+         * Encontrar editor de texto na página
+         */
+        findTextEditor() {
+            return this.benchmark('findTextEditor', async () => {
+                try {
+                    // Tentar CKEditor primeiro (mais comum no OTRS)
+                    const ckeditorFrame = document.querySelector('iframe[title*="editor"], iframe[id*="cke"], iframe.cke_wysiwyg_frame');
+                    if (ckeditorFrame) {
+                        this.log('info', 'CKEditor encontrado');
+                        return ckeditorFrame;
+                    }
+
+                    // Tentar textarea
+                    const textarea = document.querySelector('textarea[name*="Body"], textarea[id*="Body"], textarea[name*="compose"]');
+                    if (textarea) {
+                        this.log('info', 'Textarea encontrada');
+                        return textarea;
+                    }
+
+                    // Tentar elemento contenteditable
+                    const contentEditable = document.querySelector('[contenteditable="true"]');
+                    if (contentEditable) {
+                        this.log('info', 'Elemento contenteditable encontrado');
+                        return contentEditable;
+                    }
+
+                    this.log('warn', 'Nenhum editor de texto encontrado');
+                    return null;
+                } catch (error) {
+                    this.log('error', 'Erro ao procurar editor de texto', error);
+                    return null;
+                }
+            });
+        }
     }
 
-    // Disponibilizar globalmente
+    // Exportar classe para uso global
     global.HelpOTRS = global.HelpOTRS || {};
     global.HelpOTRS.FormDataReuser = FormDataReuser;
 
